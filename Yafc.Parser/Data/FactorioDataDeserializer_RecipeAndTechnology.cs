@@ -67,6 +67,8 @@ internal partial class FactorioDataDeserializer {
             recipe.allowedModuleCategories = [.. categories.ArrayElements<string>()];
         }
 
+        ReadRequiredSurfaceProperties(table, recipe);
+
         void tryReadCategories(object? maybeTable, Recipe recipe) {
             if (maybeTable is LuaTable categories) {
                 foreach (var category in categories.ArrayElements<string>()) {

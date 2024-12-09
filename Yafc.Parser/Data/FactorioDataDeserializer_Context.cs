@@ -31,6 +31,8 @@ internal partial class FactorioDataDeserializer {
     private int rocketCapacity;
     private int defaultItemWeight;
     private int constantCombinatorCapacity = 18;
+    private readonly Dictionary<string, float> defaultSurfacePropertyValues = [];
+    private readonly Dictionary<FactorioObject, List<(string property, float min, float max)>> surfaceRequirements = [];
 
     internal static readonly Version v0_18 = new Version(0, 18);
     internal static readonly Version v2_0 = new Version(2, 0);
@@ -165,6 +167,9 @@ internal partial class FactorioDataDeserializer {
         else if (typeof(TReturn).IsAssignableTo(typeof(Entity))) {
             key = (typeof(Entity), name);
         }
+        else if (typeof(TReturn).IsAssignableTo(typeof(Location))) {
+            key = (typeof(Location), name);
+        }
 
         if (registeredObjects.TryGetValue(key, out FactorioObject? existing)) {
             if (existing is TReturn result) {
@@ -232,6 +237,20 @@ internal partial class FactorioDataDeserializer {
                 "transport-belt" => typeof(EntityBelt),
                 "unit-spawner" => typeof(EntitySpawner),
                 _ => typeof(Entity)
+            };
+        }
+        else if (key.Type == typeof(Location)) {
+            if (!prototypes.TryGetValue(("space-location", name), out type) && !prototypes.TryGetValue(("surface", name), out type)) {
+                // To add another prototype that can be loaded as a location, add another check above.
+                // If necessary, also add an entry to the switch below, so each individual type is constructed as the correct C# type.
+                throw new ArgumentException($"data.raw does not contain an object named '{name}' that can be loaded as a(n) {typeof(TReturn).Name}", nameof(name));
+            }
+
+            tActual = type switch {
+                // The C# types to be used for the locations in data.raw[type]:
+                "surface" => typeof(Surface),
+                "planet" => typeof(Surface),
+                _ => typeof(Location)
             };
         }
         else {
@@ -489,13 +508,29 @@ internal partial class FactorioDataDeserializer {
         asteroids.Seal();
 
         // step 2 - fill maps
-
+        List<(string property, float min, float max)>? requirements; // The case order makes inline definition unpleasant.
         foreach (var o in allObjects) {
             switch (o) {
                 case RecipeOrTechnology recipeOrTechnology:
                     if (recipeOrTechnology is Recipe recipe) {
                         recipe.FallbackLocalization(recipe.mainProduct, LSs.LocalizationFallbackDescriptionRecipeToCreate);
                         recipe.technologyUnlock = recipeUnlockers.GetArray(recipe);
+
+                        if (recipe.sourceEntity is { } source) {
+                            if (source.factorioType is not "asteroid-chunk") {
+                                // Mining, but not asteroid collection
+                                // This requires lazy initialization. Entity spawn locations are loaded in later iterations of this loop.
+                                recipe.lazyCraftingSurfaces = new(() => source.spawnLocations);
+                            }
+                        }
+                        else if (recipe.sourceTiles.Count > 0) {
+                            // fluid pumping
+                            recipe.lazyCraftingSurfaces = new([.. recipe.sourceTiles.SelectMany(t => t.locations).Distinct()]);
+                        }
+                        else if (surfaceRequirements.TryGetValue(recipe, out requirements)) {
+                            // normal recipe, with limitations
+                            recipe.lazyCraftingSurfaces = new(getSurfacesWithProperties(requirements));
+                        }
                     }
 
                     recipeOrTechnology.crafters = actualRecipeCrafters.GetArray(recipeOrTechnology);
@@ -535,6 +570,16 @@ internal partial class FactorioDataDeserializer {
                     }
 
                     entity.sourceEntities = [.. asteroids.GetArray(entity.name)];
+
+                    List<Surface>? buildSurfaces = null;
+                    if (surfaceRequirements.TryGetValue(entity, out requirements)) {
+                        buildSurfaces = getSurfacesWithProperties(requirements);
+                    }
+                    if (entity.factorioType is "lightning-attractor") {
+                        buildSurfaces = [.. (buildSurfaces ?? allObjects.OfType<Surface>()).Where(p => p.hasLightning)];
+                    }
+                    entity.buildSurfaces = buildSurfaces;
+
                     break;
                 case Location location:
                     location.technologyUnlock = locationUnlockers.GetArray(location);
@@ -681,6 +726,26 @@ internal partial class FactorioDataDeserializer {
         static int countNonDsrRecipes(IEnumerable<Recipe> recipes)
             => recipes.Count(r => !r.name.Contains("StackedRecipe-") && !r.name.Contains("DSR_HighPressure-")
                 && r.specialType is not FactorioObjectSpecialType.Recycling and not FactorioObjectSpecialType.Voiding);
+
+        // Gets the surfaces that satisfy the supplied requirements, or null if all surfaces do.
+        List<Surface>? getSurfacesWithProperties(List<(string, float, float)> properties) {
+            List<Surface> allowedLocations = [];
+            bool allLocationsAllowed = true;
+
+            foreach (var location in allObjects.OfType<Surface>()) {
+                foreach (var (name, min, max) in properties) {
+                    if (!location.properties.TryGetValue(name, out float value) || value < min || value > max) {
+                        allLocationsAllowed = false;
+                        goto nextLocation;
+                    }
+                }
+                allowedLocations.Add(location);
+
+nextLocation:;
+            }
+
+            return allLocationsAllowed ? null : allowedLocations;
+        }
     }
 
     private Recipe CreateSpecialRecipe(FactorioObject production, string category, LocalizableString specialRecipeKey) {
@@ -748,6 +813,19 @@ internal partial class FactorioDataDeserializer {
                     if (!entities[spawner.capturedEntityName].captureAmmo.Contains(ammo)) {
                         entities[spawner.capturedEntityName].captureAmmo.Add(ammo);
                     }
+                }
+            }
+        }
+    }
+
+    private void ReadRequiredSurfaceProperties(LuaTable table, FactorioObject obj) {
+        if (table["surface_conditions"] is LuaTable surfaceConditions) {
+            var surfaceRequirements = this.surfaceRequirements[obj] = [];
+            foreach (LuaTable condition in surfaceConditions.ArrayElements<LuaTable>()) {
+                if (condition.Get("property", out string? property)) {
+                    float min = condition.Get("min", float.MinValue);
+                    float max = condition.Get("max", float.MaxValue);
+                    surfaceRequirements.Add((property, min, max));
                 }
             }
         }

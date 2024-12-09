@@ -1,5 +1,11 @@
 data = {
   raw = {
+    planet = {
+      nauvis = {
+        name = "nauvis",
+        type = "planet",
+      },
+    },
     recipe = {
       steam_void = {
         type = "recipe",
@@ -96,5 +102,8 @@ defines.prototypes = {
   item = {},
   fluid = {
     fluid = 0,
+  },
+  ["space-location"] = {
+    planet = 0
   },
 }
