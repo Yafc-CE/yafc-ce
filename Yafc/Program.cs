@@ -15,6 +15,11 @@ public static class Program {
     private static void Main(string[] args) {
         YafcLib.RegisterDefaultAnalysis();
 
+        // Wire up the UI-aware undo batch scheduler so that undo batches are committed on gesture-finish
+        // (mouse-up) rather than immediately. This must be set before any Project is loaded or created,
+        // including any that Ui.Start() might trigger during initialization.
+        UndoSystem.DefaultScheduler = new GestureFinishUndoBatchScheduler();
+
         try {
             Ui.Start();
         }
