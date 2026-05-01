@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Yafc.UI;
+namespace Yafc.Model;
 
 public readonly struct SearchQuery(string query) {
     public readonly string query = query;
