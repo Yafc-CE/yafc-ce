@@ -795,6 +795,68 @@ public sealed class RecipeRow : ModelObject<ProductionTable>, IGroupedElement<Pr
         }
     }
 
+    /// <summary>
+    /// Apply a default module when this row uses a single-category module building and no template was selected.
+    /// The chosen module is based upon the unlock order and what milestones are currently unlocked. No secondary sort on prod/speed to keep the code simpler
+    /// </summary>
+    public void AutoApplySingleCategoryModule() {
+        //Don't change anything if existing modules are set
+        if (modules != null) {
+            return;
+        }
+
+        //Basic safety checks
+        if (recipe is null || entity is null || entity.target.moduleSlots <= 0) {
+            return;
+        }
+
+        if (recipe.target is not Recipe selectedRecipe) {
+            return;
+        }
+
+        if (entity.target.allowedModuleCategories is not [string moduleCategory]) {
+            return;
+        }
+
+        Bits recipeUnlockOrder = DataUtils.GetMilestoneOrder(selectedRecipe.id);
+
+        IObjectWithQuality<Module>? bestModule = null;
+        Bits bestUnlockOrder = default;
+
+        //Loop over all modules finding the one that is usable, unlocked, and unlocks latest according to milestones
+        foreach (Module module in Database.allModules) {
+            //Check module is in the building's allowed category
+            if (!string.Equals(module.moduleSpecification.category, moduleCategory, StringComparison.Ordinal)) {
+                continue;
+            }
+
+            //Check the recipe allows this module
+            if (!entity.target.CanAcceptModule(module.moduleSpecification) || !recipe.target.CanAcceptModule(module)) {
+                continue;
+            }
+
+            //Check if this module is currently available for this recipe with the active milestones
+            Bits moduleUnlockOrder = DataUtils.GetMilestoneOrder(module.id);
+            if (moduleUnlockOrder.CompareTo(recipeUnlockOrder) > 0) {
+                continue;
+            }
+
+            //Update if this module is better (milestone order)
+            Bits moduleMilestoneOrder = Milestones.Instance.GetMilestoneResult(module.id);
+            if (bestModule == null || moduleMilestoneOrder.CompareTo(bestUnlockOrder) > 0) {
+                bestModule = module.With(Quality.Normal);
+                bestUnlockOrder = moduleMilestoneOrder;
+            }
+        }
+
+        //We have a working module, fill all the module slots
+        if (bestModule != null) {
+            modules = new ModuleTemplateBuilder {
+                list = [(bestModule, 0)]
+            }.Build(this);
+        }
+    }
+
     public float DetermineFlow(IObjectWithQuality<Goods> goods) {
         if (recipe is null) {
             throw new InvalidOperationException("Cannot determine flow when no recipe is selected.");
