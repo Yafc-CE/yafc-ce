@@ -17,13 +17,14 @@ public class ProductionTableContentTests {
         ProductionTable table = (ProductionTable)page.content;
         table.AddRecipe(Database.recipes.all.Single(r => r.name == "recipe").With(Quality.Normal), DataUtils.DeterministicComparer);
         RecipeRow row = table.GetAllRecipes().Single();
+        row.showTotalIO = true;
 
         table.modules.beacon = Database.allBeacons.Single().With(Quality.Normal);
         table.modules.beaconModule = Database.allModules.Single(m => m.name == "speed-module").With(Quality.Normal);
         table.modules.beaconsPerBuilding = 2;
         table.modules.autoFillPayback = MathF.Sqrt(float.MaxValue);
 
-        RunTest(row, testCombinations, (3 * 3 + 3 * 1) * (9 + 2) * 6); // Crafter&fuel * modules * available fixed values
+        RunTest(row, testCombinations, (3 * 3 + 3 * 1) * (9 + 2) * 8); // Crafter&fuel * modules * available fixed values
 
         // Cycle through all crafters (3 burner, 3 electric), fuels (3+1), and internal modules (9 + empty + default), and call assert for each combination.
         // assert will ensure the currently fixed value has not changed by more than 0.01%.
@@ -144,7 +145,7 @@ public class ProductionTableContentTests {
                             try {
                                 // If this fails, something weird went wrong
                                 Assert.Equal(solverGoods, displayGoods);
-                                // This tests for a failure related to https://github.com/shpaass/yafc-ce/issues/441, but for ingredients instead
+                                // This tests for a failure related to https://github.com/Yafc-CE/yafc-ce/issues/441, but for ingredients instead
                                 Assert.Equal(solverAmount * row.recipesPerSecond, displayAmount, solverAmount * .0001);
                             }
                             catch {
@@ -154,25 +155,14 @@ public class ProductionTableContentTests {
                             }
                         }
 
-                        foreach (var (display, solver) in row.Products.Zip(row.ProductsForSolver
-                            // ProductsForSolver doesn't include the spent fuel. Append an entry for the spent fuel, in the case that the spent
-                            // fuel is not a recipe product.
-                            // If the spent fuel is also a recipe product, this value will ignored in favor of the recipe-product value.
-                            .Append(new(row.fuel.FuelResult(), 0, null, 0, null)))) {
-
+                        foreach (var (display, solver) in row.Products.Zip(row.ProductsForSolver)) {
                             var (solverGoods, solverAmount, _, _, _) = solver;
                             var (displayGoods, displayAmount, _, _) = display;
-
-                            if (solverGoods == row.fuel.FuelResult()) {
-                                // ProductsForSolver doesn't include the spent fuel (in either the real or test-specific result)
-                                // Add the spent fuel amount to the value given to the solver.
-                                solverAmount += row.parameters.fuelUsagePerSecondPerRecipe;
-                            }
 
                             try {
                                 // If this fails, something weird went wrong
                                 Assert.Equal(solverGoods, displayGoods);
-                                // This tests for actual failure observed in https://github.com/shpaass/yafc-ce/issues/441
+                                // This tests for actual failure observed in https://github.com/Yafc-CE/yafc-ce/issues/441
                                 Assert.Equal(solverAmount * row.recipesPerSecond, displayAmount, solverAmount * .0001);
                             }
                             catch {

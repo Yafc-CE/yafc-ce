@@ -12,7 +12,7 @@ Any other public property is non-writable.
 All constructor parameters, except for the first parameter when derived from `ModelObject<>`, must have the same name and type as a writable property.
 
 ## Property types
-The primary data structures that get serialized and deserialized are types derived from `ModelOject` and concrete (non-abstract) classes with the `[Serializable]` attribute.
+The primary data structures that get serialized and deserialized are types derived from `ModelObject` and concrete (non-abstract) classes with the `[Serializable]` attribute.
 These are serialized property-by-property, recursively.
 Properties are handled as described here:
 
@@ -21,7 +21,7 @@ Properties are handled as described here:
 |[`ModelObject` and derived types](#modelobjects-and-serializable-types)|Supported if concrete|Supported|
 |[`[Serializable]` classes](#modelobjects-and-serializable-types)|Supported if concrete|Ignored|
 |[`ReadOnlyCollection<>` and types that implement `ICollection<>` or `IDictionary<,>`](#collections)|Error|Supported if content is supported|
-|[`FactorioOject`, all derived types, and `IObjectWithQuality<>`s](#factorioobjects-and-iobjectwithqualitys)|Supported, even when abstract|Ignored|
+|[`FactorioObject`, all derived types, and `IObjectWithQuality<>`s](#factorioobjects-and-iobjectwithqualitys)|Supported, even when abstract|Ignored|
 |[Native and native-like types](#native-types)|Supported if listed|Ignored|
 |Any type, if the property has `[SkipSerialization]`|Ignored|Ignored|
 |Other types|Error|Ignored|
@@ -53,13 +53,14 @@ If it does not, the serialization system will discard non-`null` values encounte
 
 ### Collections
 Collection values must be stored in non-writable properties, must not be passed to the constructor, and must be initialized to an empty collection.
-Unsupported keys or values will cause the property to be silently ignored.
+Unsupported key or value types will cause the property to be silently ignored.
 Arrays and other fixed-size collections (of supported values) will cause an error when deserializing, even though they implement `ICollection<>`.
 
 Keys (for dictionaries) must be: `FactorioObject` or derived from it, `IObjectWithQuality<>`, `string`, `Guid`, or `Type`.
 
 Values may be of any type that can be stored in a writable property.
 Explicitly, values are allowed to contain collections, but may not themselves be collections.
+`null` values are permitted in collections, but will be removed when loading from JSON.
 
 The serializer has special magic allowing it to modify a `ReadOnlyCollection<>`.
 Initialize the `ReadOnlyCollection<>` to `new([])`, and the serializer will populate it correctly.
@@ -103,7 +104,7 @@ but the undo system and the json serializer will ignore the old property.
 You may (should?) remove the getter from an obsolete writable property.
 
 Sometimes obsoleting a property is not reasonable, as was the case for the changes from `FactorioObject` to `ObjectWithQuality<>`.
-Depending on the requirements, you can either implement `ICustomJsonDeserializer<T>` (as used by `ObjectWithQuality<T>` in [081e9c0f](https://github.com/shpaass/yafc-ce/tree/081e9c0f6b47e155fbc82763590a70d90a64c83c/Yafc.Model/Data/DataClasses.cs#L819) and earlier),
+Depending on the requirements, you can either implement `ICustomJsonDeserializer<T>` (as used by `ObjectWithQuality<T>` in [081e9c0f](https://github.com/Yafc-CE/yafc-ce/tree/081e9c0f6b47e155fbc82763590a70d90a64c83c/Yafc.Model/Data/DataClasses.cs#L819) and earlier),
 or create a new `ValueSerializer<T>` (as seen in the current `QualityObjectSerializer<T>` implementation).
 
 ## Adding new supported types
