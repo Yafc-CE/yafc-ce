@@ -810,7 +810,7 @@ public sealed class RecipeRow : ModelObject<ProductionTable>, IGroupedElement<Pr
             return;
         }
 
-        if (recipe.target is not Recipe selectedRecipe) {
+        if (recipe.target is not Recipe targetRecipe) {
             return;
         }
 
@@ -818,7 +818,7 @@ public sealed class RecipeRow : ModelObject<ProductionTable>, IGroupedElement<Pr
             return;
         }
 
-        Bits recipeUnlockOrder = DataUtils.GetMilestoneOrder(selectedRecipe.id);
+        Bits recipeUnlockOrder = DataUtils.GetMilestoneOrder(targetRecipe.id);
 
         IObjectWithQuality<Module>? bestModule = null;
         Bits bestUnlockOrder = default;
