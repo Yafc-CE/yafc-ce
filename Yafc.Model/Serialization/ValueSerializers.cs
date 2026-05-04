@@ -473,13 +473,7 @@ internal sealed partial class QualityObjectSerializer<T> : ValueSerializer<IObje
             return;
         }
 
-        // TODO: This writes values that can be read by older versions of Yafc. For consistency with quality objects written as dictionary keys,
-        // replace these four lines with this after a suitable period of backwards compatibility:
-        // writer.WriteStringValue(GetJsonProperty(value));
-        writer.WriteStartObject();
-        writer.WriteString("target", value.target.typeDotName);
-        writer.WriteString("quality", value.quality.typeDotName);
-        writer.WriteEndObject();
+        writer.WriteStringValue(GetJsonProperty(value));
     }
 
     public override string GetJsonProperty(IObjectWithQuality<T> value) {

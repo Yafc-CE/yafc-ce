@@ -358,7 +358,7 @@ internal partial class LuaContext : IDisposable {
     private void Pop(int popc) => lua_settop(L, lua_gettop(L) - popc);
 
     public List<object?> ArrayElements(int refId) {
-        ObjectDisposedException.ThrowIf(L == IntPtr.Zero, this);
+        using LuaStackChecker checker = new(this, popExtraValues: 1);
         GetReg(refId); // 1
         lua_pushnil(L);
         List<object?> list = [];
@@ -371,17 +371,16 @@ internal partial class LuaContext : IDisposable {
                 list.Add(value);
             }
             else {
+                Pop(1); // Abandoning the iteration; remove the key.
                 break;
             }
         }
-
-        Pop(1);
 
         return list;
     }
 
     public Dictionary<object, object?> ObjectElements(int refId) {
-        ObjectDisposedException.ThrowIf(L == IntPtr.Zero, this);
+        using LuaStackChecker checker = new(this, popExtraValues: 1);
         GetReg(refId); // 1
         lua_pushnil(L);
         Dictionary<object, object?> dict = [];
@@ -394,37 +393,35 @@ internal partial class LuaContext : IDisposable {
             }
         }
 
-        Pop(1);
-
         return dict;
     }
 
     public LuaTable NewTable() {
-        ObjectDisposedException.ThrowIf(L == IntPtr.Zero, this);
+        using LuaStackChecker checker = new(this);
         lua_createtable(L, 0, 0);
         return new LuaTable(this, luaL_ref(L, REGISTRY));
     }
 
     public object? GetGlobal(string name) {
-        ObjectDisposedException.ThrowIf(L == IntPtr.Zero, this);
+        using LuaStackChecker checker = new(this);
         _ = lua_getglobal(L, name); // 1
         return PopManagedValue(1);
     }
 
     public void SetGlobal(string name, object value) {
-        ObjectDisposedException.ThrowIf(L == IntPtr.Zero, this);
+        using LuaStackChecker checker = new(this);
         PushManagedObject(value);
         lua_setglobal(L, name);
     }
     public object? GetValue(int refId, int idx) {
-        ObjectDisposedException.ThrowIf(L == IntPtr.Zero, this);
+        using LuaStackChecker checker = new(this);
         GetReg(refId); // 1
         lua_rawgeti(L, -1, idx); // 2
         return PopManagedValue(2);
     }
 
     public object? GetValue(int refId, string idx) {
-        ObjectDisposedException.ThrowIf(L == IntPtr.Zero, this);
+        using LuaStackChecker checker = new(this);
         GetReg(refId); // 1
         _ = lua_pushstring(L, idx); // 2
         lua_rawget(L, -2); // 2 (pop & push)
@@ -493,20 +490,18 @@ internal partial class LuaContext : IDisposable {
     }
 
     public void SetValue(int refId, string idx, object? value) {
-        ObjectDisposedException.ThrowIf(L == IntPtr.Zero, this);
+        using LuaStackChecker checker = new(this, popExtraValues: 1);
         GetReg(refId); // 1;
         _ = lua_pushstring(L, idx); // 2
         PushManagedObject(value); // 3;
         lua_rawset(L, -3);
-        Pop(3);
     }
 
     public void SetValue(int refId, int idx, object? value) {
-        ObjectDisposedException.ThrowIf(L == IntPtr.Zero, this);
+        using LuaStackChecker checker = new(this, popExtraValues: 1);
         GetReg(refId); // 1;
         PushManagedObject(value); // 2;
         lua_rawseti(L, -2, idx);
-        Pop(2);
     }
 
     private static string GetDirectoryName(string s) {
@@ -612,6 +607,7 @@ internal partial class LuaContext : IDisposable {
 
     protected readonly List<object> neverCollect = []; // references callbacks that could be called from native code to not be garbage collected
     private void RegisterApi(LuaCFunction callback, string name) {
+        using LuaStackChecker checker = new(this);
         neverCollect.Add(callback);
         lua_pushcclosure(L, Marshal.GetFunctionPointerForDelegate(callback), 0);
         lua_setglobal(L, name);
@@ -625,15 +621,16 @@ internal partial class LuaContext : IDisposable {
     /// but it must already exist.</param>
     /// <param name="name">The table key that will receive <paramref name="callback"/>.</param>
     private void RegisterApi(LuaCFunction callback, string topLevel, string name) {
+        using LuaStackChecker checker = new(this, popExtraValues: 1);
         neverCollect.Add(callback);
         _ = lua_getglobal(L, topLevel);
         _ = lua_pushstring(L, name);
         lua_pushcclosure(L, Marshal.GetFunctionPointerForDelegate(callback), 0);
         lua_rawset(L, -3);
-        Pop(1);
     }
 
     private string? GetString(int index) {
+        using LuaStackChecker checker = new(this);
         nint ptr = lua_tolstring(L, index, out nint len);
         if (ptr == IntPtr.Zero) {
             return null;
@@ -645,7 +642,7 @@ internal partial class LuaContext : IDisposable {
     }
 
     public int Exec(ReadOnlySpan<byte> chunk, string mod, string name, int argument = 0) {
-        ObjectDisposedException.ThrowIf(L == IntPtr.Zero, this);
+        using LuaStackChecker checker = new(this, popExtraValues: 1);
         // since lua cuts file name to a few dozen symbols, add index to start of every name
         fullChunkNames.Add((mod, name));
         name = fullChunkNames.Count - 1 + " " + name;
@@ -706,6 +703,31 @@ internal partial class LuaContext : IDisposable {
 
     [GeneratedRegex("^[0-9]+ ")]
     private static partial Regex FindChunkId();
+
+    /// <summary>
+    /// Captures the current state of the lua interop stack. When disposed, verifies that the stack did not gain or lose any values.
+    /// </summary>
+    private readonly struct LuaStackChecker : IDisposable {
+        private readonly LuaContext ctx;
+        private readonly int size;
+        private readonly int popExtraValues;
+
+        /// <param name="popExtraValues">Expect this many extra values on the stack, and remove them after verifying.</param>
+        public LuaStackChecker(LuaContext ctx, int popExtraValues = 0) {
+            ObjectDisposedException.ThrowIf(ctx.L == IntPtr.Zero, ctx);
+            this.ctx = ctx;
+            this.popExtraValues = popExtraValues;
+            size = lua_gettop(ctx.L);
+        }
+
+        public void Dispose() {
+            int newSize = lua_gettop(ctx.L);
+            if (newSize != size + popExtraValues) {
+                throw new Exception($"Lua interop stack did not remain balanced (was {size}, expected {size + popExtraValues}, now {newSize}).");
+            }
+            ctx.Pop(popExtraValues);
+        }
+    }
 
     // The full list of characters printf accepts between % and e is [-+ #0-9*.l] (https://en.cppreference.com/w/c/io/fprintf)
     // Lua does not support * or l (https://www.lua.org/manual/5.2/manual.html#pdf-string.format)
