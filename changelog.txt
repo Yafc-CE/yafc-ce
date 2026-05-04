@@ -22,6 +22,7 @@
 Version:
 Date:
     Features:
+        - Automatically apply single use modules to recipes. e.g. Autoamtically fill PyAL buildings with appropriate module for the current milestone
     Fixes:
 ----------------------------------------------------------------------------------------------------------------------
 Version: 2.18.0
