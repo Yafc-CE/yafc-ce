@@ -27,8 +27,18 @@ public partial class Project : ModelObject {
     public new UndoSystem undo => base.undo;
     private uint lastSavedVersion;
     private uint lastAutoSavedVersion;
+    private bool restoredAutosaveNeedsSave;
 
-    public uint unsavedChangesCount => projectVersion - lastSavedVersion;
+    private uint versionUnsavedChangesCount => projectVersion - lastSavedVersion;
+    public uint unsavedChangesCount {
+        get {
+            uint count = versionUnsavedChangesCount;
+            return count > 0 ? count : restoredAutosaveNeedsSave || attachedFileMissing ? 1u : 0u;
+        }
+    }
+    public bool hasUnsavedChanges => unsavedChangesCount > 0;
+    public bool needsSave => hasUnsavedChanges || string.IsNullOrEmpty(attachedFileName);
+    private bool attachedFileMissing => !string.IsNullOrEmpty(attachedFileName) && !File.Exists(attachedFileName);
 
     private int autosaveIndex;
     private const int AutosaveRollingLimit = 5;
@@ -38,7 +48,7 @@ public partial class Project : ModelObject {
     public Project() : base(new UndoSystem()) {
         settings = new ProjectSettings(this);
         preferences = new ProjectPreferences(this);
-        base.undo.versionChanged += () => saveStateChanged?.Invoke(unsavedChangesCount > 0);
+        base.undo.versionChanged += () => saveStateChanged?.Invoke(needsSave);
     }
 
     public event Action? metaInfoChanged;
@@ -109,6 +119,7 @@ public partial class Project : ModelObject {
             Project? project;
 
             var highestAutosaveIndex = 0;
+            bool restoredFromAutosave = false;
 
             // Check whether there is an autosave that is saved at a later time than the current save.
             if (useMostRecent) {
@@ -125,6 +136,7 @@ public partial class Project : ModelObject {
                 if (highestAutosave != null && highestAutosave.LastWriteTimeUtc > savetime) {
                     highestAutosaveIndex = highestAutosave.Index;
                     path = highestAutosave.Path;
+                    restoredFromAutosave = true;
                 }
             }
 
@@ -143,6 +155,8 @@ public partial class Project : ModelObject {
 
             project.attachedFileName = path;
             project.lastSavedVersion = project.projectVersion;
+            project.lastAutoSavedVersion = project.projectVersion;
+            project.restoredAutosaveNeedsSave = restoredFromAutosave;
             project.autosaveIndex = highestAutosaveIndex;
 
             return project;
@@ -181,7 +195,8 @@ public partial class Project : ModelObject {
     }
 
     public void Save(string fileName) {
-        if (lastSavedVersion == projectVersion && fileName == attachedFileName) {
+        if (lastSavedVersion == projectVersion && fileName == attachedFileName && File.Exists(fileName) && !restoredAutosaveNeedsSave) {
+            lastAutoSavedVersion = projectVersion;
             return;
         }
 
@@ -191,8 +206,10 @@ public partial class Project : ModelObject {
 
         attachedFileName = fileName;
         lastSavedVersion = projectVersion;
+        lastAutoSavedVersion = projectVersion;
+        restoredAutosaveNeedsSave = false;
 
-        saveStateChanged?.Invoke(false);
+        saveStateChanged?.Invoke(needsSave);
     }
 
     public void Save(Stream stream) {
@@ -201,7 +218,11 @@ public partial class Project : ModelObject {
     }
 
     public void PerformAutoSave() {
-        if (!string.IsNullOrWhiteSpace(attachedFileName) && lastAutoSavedVersion != projectVersion) {
+        if (string.IsNullOrWhiteSpace(attachedFileName)) {
+            return;
+        }
+
+        if (hasUnsavedChanges && lastAutoSavedVersion != projectVersion) {
             autosaveIndex = (autosaveIndex % AutosaveRollingLimit) + 1;
             var fileName = GenerateAutosavePath(attachedFileName, autosaveIndex);
 

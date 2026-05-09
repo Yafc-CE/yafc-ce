@@ -4,6 +4,7 @@ using Xunit;
 
 namespace Yafc.Model.Tests;
 
+[Collection("LuaDependentTests")]
 public class ProjectTests {
     [Theory]
     [InlineData(true)]
@@ -14,16 +15,150 @@ public class ProjectTests {
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void ReadFromFile_CanLoadNonexistentFile(bool useMostRecent)
-        // Assuming that there are no files named <some-guid>.yafc in the current directory.
-        => Assert.NotNull(Project.ReadFromFile(Guid.NewGuid().ToString() + ".yafc", new(), useMostRecent));
+    public void ReadFromFile_EmptyString_NeedsSaveButHasNoUnsavedChanges(bool useMostRecent) {
+        Project project = Project.ReadFromFile("", new(), useMostRecent);
+
+        Assert.True(project.needsSave);
+        Assert.False(project.hasUnsavedChanges);
+        Assert.Equal(0u, project.unsavedChangesCount);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ReadFromFile_CanLoadNonexistentFile(bool useMostRecent) {
+        string path = CreateTestProjectPath();
+        try {
+            Project project = Project.ReadFromFile(path, new(), useMostRecent);
+
+            Assert.NotNull(project);
+            Assert.Equal(path, project.attachedFileName);
+            Assert.True(project.needsSave);
+            Assert.True(project.hasUnsavedChanges);
+            Assert.Equal(1u, project.unsavedChangesCount);
+        }
+        finally {
+            File.Delete(path);
+        }
+    }
 
     [Fact]
-    // PerformAutoSave is expected to be a no-op in this case.
-    // This test may need more care and feeding if autosaving is added for nameless projects.
-    public void PerformAutoSave_NoThrowWhenLoadedWithEmptyString()
-        // No Assert in this test; the test passes if PerformAutoSave does not throw.
-        => Project.ReadFromFile("", new(), false).PerformAutoSave();
+    public void Save_NonexistentAttachedFile_CreatesFile() {
+        string path = CreateTestProjectPath();
+        try {
+            Project project = Project.ReadFromFile(path, new(), false);
+
+            project.Save(path);
+
+            Assert.True(File.Exists(path));
+            Assert.False(project.needsSave);
+            Assert.False(project.hasUnsavedChanges);
+        }
+        finally {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void ReadFromFile_NewerAutosave_NeedsSaveUntilManualSave() {
+        string path = CreateTestProjectPath();
+        try {
+            Project mainSave = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Model.ProductionTableContentTests.lua");
+            mainSave.preferences.time = 1;
+            mainSave.Save(path);
+
+            mainSave.preferences.time = 60;
+            string autosavePath = Project.GenerateAutosavePath(path, 1);
+            using (FileStream fs = new FileStream(autosavePath, FileMode.Create, FileAccess.Write)) {
+                mainSave.Save(fs);
+            }
+
+            DateTime now = DateTime.UtcNow;
+            File.SetLastWriteTimeUtc(path, now.AddMinutes(-5));
+            File.SetLastWriteTimeUtc(autosavePath, now);
+
+            Project project = Project.ReadFromFile(path, new(), true);
+
+            Assert.Equal(path, project.attachedFileName);
+            Assert.Equal(60, project.preferences.time);
+            Assert.True(project.needsSave);
+            Assert.True(project.hasUnsavedChanges);
+            Assert.Equal(1u, project.unsavedChangesCount);
+
+            project.Save(path);
+
+            Assert.False(project.needsSave);
+            Assert.False(project.hasUnsavedChanges);
+            Assert.Equal(0u, project.unsavedChangesCount);
+
+            Project savedProject = Project.ReadFromFile(path, new(), false);
+            Assert.Equal(60, savedProject.preferences.time);
+        }
+        finally {
+            DeleteProjectAndAutosaves(path);
+        }
+    }
+
+    [Fact]
+    public void PerformAutoSave_CleanLoadedProject_DoesNotCreateAutosave() {
+        string path = CreateTestProjectPath();
+        try {
+            Project savedProject = new Project();
+            savedProject.Save(path);
+
+            Project project = Project.ReadFromFile(path, new(), false);
+
+            Assert.False(project.needsSave);
+            Assert.False(project.hasUnsavedChanges);
+
+            project.PerformAutoSave();
+
+            Assert.False(File.Exists(Project.GenerateAutosavePath(path, 1)));
+        }
+        finally {
+            DeleteProjectAndAutosaves(path);
+        }
+    }
+
+    [Fact]
+    public void PerformAutoSave_AfterManualSave_DoesNotCreateAutosave() {
+        string path = CreateTestProjectPath();
+        try {
+            Project project = new Project();
+            project.Save(path);
+            project.undo.RecordChange();
+
+            Assert.True(project.hasUnsavedChanges);
+
+            project.Save(path);
+            project.PerformAutoSave();
+
+            Assert.False(project.needsSave);
+            Assert.False(project.hasUnsavedChanges);
+            Assert.False(File.Exists(Project.GenerateAutosavePath(path, 1)));
+        }
+        finally {
+            DeleteProjectAndAutosaves(path);
+        }
+    }
+
+    [Fact]
+    public void PerformAutoSave_DirtyProject_CreatesAutosave() {
+        string path = CreateTestProjectPath();
+        try {
+            Project project = new Project();
+            project.Save(path);
+            project.undo.RecordChange();
+
+            project.PerformAutoSave();
+
+            Assert.True(File.Exists(Project.GenerateAutosavePath(path, 1)));
+        }
+        finally {
+            DeleteProjectAndAutosaves(path);
+        }
+    }
+
 
     [Fact]
     public void AutosaveInDotYafcDirectory_DoesNotModifyDirectory()
@@ -34,4 +169,17 @@ public class ProjectTests {
     public void AutosaveInDotYafcDirectoryWithNoExtension_DoesNotModifyDirectory()
         // Use Path.Combine to generate host-native path separators. (GenerateAutosavePath coincidentally converts separators.)
         => Assert.Equal(Path.Combine("home", ".yafc", "ProjectName-autosave-4.yafc"), Project.GenerateAutosavePath("home/.yafc/ProjectName", 4));
+
+    private static string CreateTestProjectPath() {
+        string directory = Path.Combine(AppContext.BaseDirectory, "ProjectTestFiles");
+        _ = Directory.CreateDirectory(directory);
+        return Path.Combine(directory, Guid.NewGuid() + ".yafc");
+    }
+
+    private static void DeleteProjectAndAutosaves(string path) {
+        File.Delete(path);
+        for (int i = 1; i <= 5; i++) {
+            File.Delete(Project.GenerateAutosavePath(path, i));
+        }
+    }
 }

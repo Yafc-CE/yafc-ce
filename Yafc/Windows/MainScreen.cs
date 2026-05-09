@@ -63,7 +63,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
 
         onFocusLost += () => {
             if (Preferences.Instance.autosaveEnabled) {
-                project.PerformAutoSave();
+                this.project.PerformAutoSave();
             }
         };
     }
@@ -94,7 +94,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         project.saveStateChanged += ProjectSaveStateChanged;
 
         _ = InputSystem.Instance.SetDefaultKeyboardFocus(this);
-        UpdateWindowTitle(project.unsavedChangesCount > 0);
+        UpdateWindowTitle(project.needsSave);
     }
 
     private void ProjectSettingsChanged(bool visualOnly) {
@@ -149,8 +149,8 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         }
     }
 
-    private void ProjectSaveStateChanged(bool unsavedChanges) {
-        UpdateWindowTitle(unsavedChanges);
+    private void ProjectSaveStateChanged(bool needsSave) {
+        UpdateWindowTitle(needsSave);
     }
 
     private void ChangePage(ref ProjectPage? activePage, ProjectPage? newPage, ref ProjectPageView? activePageView, ProjectPageView? newPageView) {
@@ -379,7 +379,8 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
             project.undo.PerformUndo();
         }
 
-        if (gui.BuildContextMenuButton(LSs.Save, LSs.ShortcutCtrlX.L(ImGuiUtils.ScanToString(SDL.SDL_Scancode.SDL_SCANCODE_S)), disabled: project.unsavedChangesCount == 0) && gui.CloseDropdown()) {
+        bool canSaveProject = project.needsSave;
+        if (gui.BuildContextMenuButton(LSs.Save, LSs.ShortcutCtrlX.L(ImGuiUtils.ScanToString(SDL.SDL_Scancode.SDL_SCANCODE_S)), disabled: !canSaveProject) && canSaveProject && gui.CloseDropdown()) {
             SaveProject().CaptureException();
         }
 
@@ -456,7 +457,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
     public override bool preventQuit => true;
 
     protected override async void Close() {
-        if (!saveConfirmationActive && project.unsavedChangesCount > 0 && !await ConfirmUnsavedChanges()) {
+        if (!saveConfirmationActive && project.needsSave && !await ConfirmUnsavedChanges()) {
             return;
         }
 
@@ -487,20 +488,21 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         base.Close();
     }
 
-    private void UpdateWindowTitle(bool unsavedChanges) {
+    private void UpdateWindowTitle(bool needsSave) {
         var projectName = string.IsNullOrEmpty(project.attachedFileName)
             ? LSs.UntitledProject
-            : (unsavedChanges ? "*" : string.Empty) + Path.GetFileNameWithoutExtension(project.attachedFileName);
+            : (needsSave ? "*" : string.Empty) + Path.GetFileNameWithoutExtension(project.attachedFileName);
         SetWindowTitle($"{projectName} - {LSs.FullNameWithVersion.L(YafcLib.version.ToString(3))}");
     }
 
     private async Task<bool> ConfirmUnsavedChanges() {
+        uint unsavedChangesCount = project.unsavedChangesCount == 0 && project.needsSave ? 1u : project.unsavedChangesCount;
         string unsavedCount;
         if (string.IsNullOrEmpty(project.attachedFileName)) {
-            unsavedCount = LSs.AlertUnsavedChanges.L(project.unsavedChangesCount);
+            unsavedCount = LSs.AlertUnsavedChanges.L(unsavedChangesCount);
         }
         else {
-            unsavedCount = LSs.AlertUnsavedChangesInFile.L(project.unsavedChangesCount, project.attachedFileName);
+            unsavedCount = LSs.AlertUnsavedChangesInFile.L(unsavedChangesCount, project.attachedFileName);
         }
 
         saveConfirmationActive = true;
@@ -598,7 +600,9 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         if (ctrl) {
             switch (key.scancode) {
                 case SDL.SDL_Scancode.SDL_SCANCODE_S:
-                    SaveProject().CaptureException();
+                    if (project.needsSave) {
+                        SaveProject().CaptureException();
+                    }
                     break;
                 case SDL.SDL_Scancode.SDL_SCANCODE_Z when shift:
                 case SDL.SDL_Scancode.SDL_SCANCODE_Y:
@@ -684,7 +688,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
     }
 
     private async void LoadProjectLight() {
-        if (project.unsavedChangesCount > 0 && !await ConfirmUnsavedChanges()) {
+        if (project.needsSave && !await ConfirmUnsavedChanges()) {
             return;
         }
 
@@ -711,7 +715,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
     }
 
     private async void ReturnToWelcomeScreen() {
-        if (project.unsavedChangesCount > 0 && !await ConfirmUnsavedChanges()) {
+        if (project.needsSave && !await ConfirmUnsavedChanges()) {
             return;
         }
 
