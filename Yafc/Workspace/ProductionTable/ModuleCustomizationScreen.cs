@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Yafc.Core;
 using Yafc.I18n;
 using Yafc.Model;
 using Yafc.UI;
@@ -307,7 +308,7 @@ public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBu
                 }
             }
             else {
-                int beaconCount = (modules.beaconList.Sum(x => x.fixedCount) - 1) / beacon.target.moduleSlots + 1;
+                int beaconCount = IntegerMath.CeilingDivide(modules.beaconList.Sum(x => x.fixedCount), beacon.target.moduleSlots);
                 effects.AddModules(module, fixedCount * beacon.GetBeaconEfficiency() * beacon.target.GetProfile(beaconCount));
             }
         }

@@ -163,7 +163,16 @@ public class DataGrid<TData>(params DataColumn<TData>[] columns) where TData : c
         }
     }
 
-    public Rect BuildRow(ImGui gui, TData element, float startX = 0f) {
+    /// <summary>Builds a single grid row for the given <paramref name="element"/>, allocating each column's cell at its configured
+    /// width and drawing a separator line at the bottom of the row.</summary>
+    /// <param name="gui">The <see cref="ImGui"/> to draw the row into.</param>
+    /// <param name="element">The data element passed to each column's <see cref="DataColumn{TData}.BuildElement"/>.</param>
+    /// <param name="startX">X coordinate at which the row's bottom separator starts. Cells to the left of this X have no separator drawn.</param>
+    /// <param name="minRowHeight">Minimum height (in YAFC units) to allocate for each column's cell. The <see cref="RectAllocator.LeftRow"/>
+    /// allocator inside each column will widen its content rect to at least this height, which is useful when rendering rows of
+    /// multiple grids in parallel (e.g. side-by-side scroll areas) that must keep their per-row heights aligned.</param>
+    /// <returns>The rectangle that the row occupies in the parent <paramref name="gui"/>.</returns>
+    public Rect BuildRow(ImGui gui, TData element, float startX = 0f, float minRowHeight = 0f) {
         contentGui = gui;
         float x = innerPadding.left;
         var rowColor = SchemeColor.None;
@@ -176,7 +185,7 @@ public class DataGrid<TData>(params DataColumn<TData>[] columns) where TData : c
                         column.width = column.minWidth;
                     }
 
-                    @group.SetManualRect(new Rect(x, 0, column.width, 0f), RectAllocator.LeftRow);
+                    @group.SetManualRect(new Rect(x, 0, column.width, minRowHeight), RectAllocator.LeftRow);
                     column.BuildElement(gui, element);
                     x += column.width + spacing;
                 }

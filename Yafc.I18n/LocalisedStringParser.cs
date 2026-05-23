@@ -116,8 +116,13 @@ public static class LocalisedStringParser {
                 case "ITEM":
                 case "TILE":
                 case "FLUID":
+                case "RECIPE":
                     string name = readExtraParameter();
                     result.Append(ParseKeyInternal($"{type.ToLower()}-name.{name}", []));
+                    break;
+                case "PLANET":
+                    name = readExtraParameter();
+                    result.Append(ParseKeyInternal($"space-location-name.{name}", []));
                     break;
                 case "YAFC":
                     name = readExtraParameter();

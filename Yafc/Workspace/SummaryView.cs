@@ -17,14 +17,7 @@ public class SummaryView : ProjectPageView<Summary> {
     /// <summary>Some padding to have the contents of the first column not 'stick' to the rest of the UI</summary>
     private readonly Padding FirstColumnPadding = new Padding(1f, 1.5f, 0, 0);
     private static float firstColumnWidth;
-
-    private class SummaryScrollArea(GuiBuilder builder) : ScrollArea(DefaultHeight, builder, horizontal: true) {
-        private static readonly float DefaultHeight = 10;
-
-        public new void Build(ImGui gui) =>
-            // Maximize scroll area to fit parent area (minus header and 'show issues' heights, and some (3) padding probably)
-            Build(gui, gui.valid && gui.parent is not null ? gui.parent.contentSize.Y - Font.header.size - Font.text.size - 3 : DefaultHeight);
-    }
+    private const float DefaultScrollHeight = 10f;
 
     private class SummaryTabColumn : TextDataColumn<ProjectPage> {
         public SummaryTabColumn() : base(LSs.Page, firstColumnWidth) {
@@ -41,7 +34,7 @@ public class SummaryView : ProjectPageView<Summary> {
                 gui.spacing = 0.2f;
 
                 if (page.icon != null) {
-                    gui.BuildIcon(page.icon.icon, FirstColumnIconSize);
+                    gui.BuildIcon(page.icon.GetIcon(), FirstColumnIconSize);
                 }
                 else {
                     _ = gui.AllocateRect(0f, FirstColumnIconSize);
@@ -86,7 +79,6 @@ public class SummaryView : ProjectPageView<Summary> {
                     // Reserve empty space to prevent 'compressing' empty rows
                     _ = gui.AllocateRect(0f, view.rowHeight);
                 }
-
             }
         }
 
@@ -161,9 +153,12 @@ public class SummaryView : ProjectPageView<Summary> {
     private Project project;
     private SearchQuery searchQuery;
 
-    private readonly SummaryScrollArea scrollArea;
+    private readonly LinkedScrollArea leftScrollArea;
+    private readonly LinkedScrollArea rightScrollArea;
+    private readonly SummaryTabColumn tabColumn;
     private readonly SummaryDataColumn goodsColumn;
-    private readonly DataGrid<ProjectPage> mainGrid;
+    private readonly DataGrid<ProjectPage> leftGrid;
+    private readonly DataGrid<ProjectPage> rightGrid;
 
     private Dictionary<string, GoodDetails> allGoods = [];
 
@@ -200,10 +195,15 @@ public class SummaryView : ProjectPageView<Summary> {
     }
 
     public SummaryView(Project project) {
+        tabColumn = new SummaryTabColumn();
         goodsColumn = new SummaryDataColumn(this);
-        TextDataColumn<ProjectPage>[] columns = [new SummaryTabColumn(), goodsColumn];
-        scrollArea = new SummaryScrollArea(BuildScrollArea);
-        mainGrid = new DataGrid<ProjectPage>(columns);
+        leftGrid = new DataGrid<ProjectPage>(tabColumn);
+        rightGrid = new DataGrid<ProjectPage>(goodsColumn);
+        // Only the right side draws the visible vertical scrollbar; the left's vertical scrolling is mirrored from
+        // the right via Link() so both sides stay aligned without a second visible scrollbar.
+        leftScrollArea = new LinkedScrollArea(DefaultScrollHeight, BuildLeftScrollArea, horizontal: false, drawVerticalScrollbar: false);
+        rightScrollArea = new LinkedScrollArea(DefaultScrollHeight, BuildRightScrollArea, horizontal: true, drawVerticalScrollbar: true);
+        leftScrollArea.Link(rightScrollArea);
 
         SetProject(project);
     }
@@ -278,7 +278,24 @@ public class SummaryView : ProjectPageView<Summary> {
             rowHeight = ButtonDisplayStyle.ProductionTableUnscaled.Size + gui.PixelsToUnits(gui.GetFontSize().lineSize);
         }
 
-        scrollArea.Build(gui);
+        // Lay out left (sticky) and right (horizontally scrollable) side-by-side. The left side's scrollbar is
+        // hidden, so it doesn't reserve scrollbar width. DataGrid.BuildRow shifts the column by `innerPadding.left`
+        // twice (once via the row's starting x, once via the manual-rect padding) before reserving `innerPadding.right`
+        // at the right edge — so account for both inner-padding halves here.
+        using (gui.EnterRow(spacing: 0, allocator: RectAllocator.LeftRow)) {
+            // Compute availableHeight *inside* the row so EnterRow's implicit spacing is already accounted for in
+            // gui.statePosition.Y. visibleSize.Y - headerHeight is the body's viewport; subtracting the current top
+            // gives the exact remaining height. Fall back to DefaultScrollHeight on the first build, before
+            // ProjectPageView.Build has populated visibleSize.
+            float availableHeight = MathF.Max(DefaultScrollHeight, visibleSize.Y - headerHeight - gui.statePosition.Y);
+            float leftWidth = firstColumnWidth + (2 * DataGrid<ProjectPage>.innerPadding.left) + DataGrid<ProjectPage>.innerPadding.right;
+            using (gui.EnterFixedPositioning(leftWidth, 0, default)) {
+                leftScrollArea.Build(gui, availableHeight);
+            }
+            using (gui.EnterFixedPositioning(gui.width, 0, default)) {
+                rightScrollArea.Build(gui, availableHeight);
+            }
+        }
     }
 
     private async Task AutoBalance() {
@@ -347,10 +364,22 @@ public class SummaryView : ProjectPageView<Summary> {
     private IEnumerable<ProductionTable> DisplayTables => project.displayPages.Select(p => project.FindPage(p)?.content as ProductionTable).WhereNotNull();
     private IEnumerable<ProjectPage> DisplayPages => DisplayTables.Select(t => (ProjectPage)t.owner);
 
-    private void BuildScrollArea(ImGui gui) {
+    private void BuildLeftScrollArea(ImGui gui) {
         foreach (ProjectPage page in DisplayPages) {
-            _ = mainGrid.BuildRow(gui, page);
+            _ = leftGrid.BuildRow(gui, page, minRowHeight: rowHeight);
         }
+        // Match the right side's reserved-for-H-scrollbar space so the synced vertical scroll positions align
+        // perfectly between the two sides.
+        _ = gui.AllocateRect(0, ScrollArea.ScrollbarSize);
+    }
+
+    private void BuildRightScrollArea(ImGui gui) {
+        foreach (ProjectPage page in DisplayPages) {
+            _ = rightGrid.BuildRow(gui, page, minRowHeight: rowHeight);
+        }
+        // Reserve space below the last row so it can be scrolled clear of the horizontal scrollbar that sits at
+        // the bottom of this scroll area.
+        _ = gui.AllocateRect(0, ScrollArea.ScrollbarSize);
     }
 
     private void Recalculate() => Recalculate(false);
@@ -404,12 +433,15 @@ public class SummaryView : ProjectPageView<Summary> {
             count++;
         }
 
-        goodsColumn.width = count * (ElementWidth + ElementSpacing);
+        // Width of the goods column: N cells of (ElementWidth + ElementSpacing), minus the trailing inter-cell
+        // spacing after the last cell, which doesn't visually exist.
+        goodsColumn.width = (count * (ElementWidth + ElementSpacing)) - ElementSpacing;
 
         allGoods = newGoods;
 
         Rebuild(visualOnly);
-        scrollArea.RebuildContents();
+        leftScrollArea.RebuildContents();
+        rightScrollArea.RebuildContents();
     }
 
     // Convert/truncate value as shown in UI to prevent slight mismatches
@@ -421,6 +453,7 @@ public class SummaryView : ProjectPageView<Summary> {
     public override void SetSearchQuery(SearchQuery query) {
         searchQuery = query;
         bodyContent.Rebuild();
-        scrollArea.Rebuild();
+        leftScrollArea.Rebuild();
+        rightScrollArea.Rebuild();
     }
 }

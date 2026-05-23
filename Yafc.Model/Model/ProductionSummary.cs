@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Yafc.I18n;
 using Yafc.UI;
@@ -54,19 +55,11 @@ public class ProductionSummaryEntry(ProductionSummaryGroup owner) : ModelObject<
     [SkipSerialization] public Dictionary<IObjectWithQuality<Goods>, float> flow { get; } = [];
     private bool needRefreshFlow = true;
 
-    public Icon icon {
-        get {
-            if (subgroup != null) {
-                return Icon.Folder;
-            }
-
-            if (page?.page == null) {
-                return Icon.Warning;
-            }
-
-            return page.page.icon?.icon ?? Icon.None;
-        }
-    }
+    /// <summary>True when this entry represents a folder/subgroup rather than a project page.</summary>
+    [MemberNotNullWhen(true, nameof(subgroup))]
+    public bool IsSubgroup => subgroup != null;
+    /// <summary>True when this entry's referenced page has been removed or could not be found.</summary>
+    public bool IsMissingPage => !IsSubgroup && page?.page == null;
 
     public string name {
         get {

@@ -213,8 +213,8 @@ internal partial class FactorioDataDeserializer {
         }
     }
 
-    private Func<LuaTable, Product> LoadProduct(string typeDotName, int multiplier = 1, float? percentSpoiled = null) => table => {
-        Goods? goods = LoadItemOrFluid(table, true);
+    private Func<LuaTable, Product> LoadProduct(string recipeName, int multiplier = 1, float? percentSpoiled = null, bool isAlwaysItem = false) => table => {
+        Goods? goods = LoadItemOrFluid(table, useTemperature: true, isAlwaysItem);
 
         float min, max, catalyst;
         if (goods is Item) {
@@ -226,7 +226,7 @@ internal partial class FactorioDataDeserializer {
                 max = effectiveMax;
             }
             else {
-                throw new NotSupportedException($"Could not load amount for one of the products for {typeDotName}, possibly named '{table.Get("name", "")}'.");
+                throw new NotSupportedException($"Could not load amount for one of the products for {recipeName}, possibly named '{table.Get("name", "")}'.");
             }
 
             percentSpoiled ??= table.Get<float?>("percent_spoiled");
@@ -247,7 +247,7 @@ internal partial class FactorioDataDeserializer {
                 // nothing to do
             }
             else {
-                throw new NotSupportedException($"Could not load amount for one of the products for {typeDotName}, possibly named '{table.Get("name", "")}'.");
+                throw new NotSupportedException($"Could not load amount for one of the products for {recipeName}, possibly named '{table.Get("name", "")}'.");
             }
 
             // ignored_by_productivity (default is the value of ignored_by_stats) in 2.0; catalyst_amount in 1.1.
@@ -255,7 +255,7 @@ internal partial class FactorioDataDeserializer {
             catalyst = table.Get("ignored_by_productivity", table.Get("ignored_by_stats", table.Get("catalyst_amount", 0f)));
         }
         else {
-            throw new NotSupportedException($"Could not load one of the products for {typeDotName}, possibly named '{table.Get("name", "")}'.");
+            throw new NotSupportedException($"Could not load one of the products for {recipeName}, possibly named '{table.Get("name", "")}'.");
         }
 
         Product product = new Product(goods, min * multiplier, max * multiplier, table.Get("probability", 1f)) { percentSpoiled = percentSpoiled };
@@ -287,7 +287,7 @@ internal partial class FactorioDataDeserializer {
         _ = table.Get("ingredients", out LuaTable? ingredientsList);
 
         return ingredientsList?.ArrayElements<LuaTable>().Select(table => {
-            Goods? goods = LoadItemOrFluid(table, false);
+            Goods? goods = LoadItemOrFluid(table, useTemperature: false, isAlwaysItem: false);
 
             if (goods is null) {
                 errorCollector.Error($"Failed to load at least one ingredient for {typeDotName}.", ErrorSeverity.AnalysisWarning);

@@ -14,7 +14,11 @@ public abstract class ProjectPageView : Scrollable {
 
     public readonly ImGui headerContent;
     public readonly ImGui bodyContent;
-    private float contentWidth, headerHeight, contentHeight;
+    private float contentWidth, contentHeight;
+    /// <summary>The header's measured height. Available to subclasses so they can size body-area widgets to the actual viewport.</summary>
+    protected float headerHeight { get; private set; }
+    /// <summary>The visible size most recently passed to <see cref="Build(ImGui, Vector2)"/>. Body viewport height equals <c>visibleSize.Y - headerHeight</c>.</summary>
+    protected Vector2 visibleSize { get; private set; }
     private SearchQuery searchQuery;
     protected abstract void BuildHeader(ImGui gui);
     protected abstract void BuildContent(ImGui gui);
@@ -40,6 +44,7 @@ public abstract class ProjectPageView : Scrollable {
     public ProjectPageView CreateSecondaryView() => (ProjectPageView)Activator.CreateInstance(GetType())!;
 
     public void Build(ImGui gui, Vector2 visibleSize) {
+        this.visibleSize = visibleSize;
         if (gui.isBuilding) {
             gui.spacing = 0f;
             var position = gui.AllocateRect(0f, 0f, 0f).Position;

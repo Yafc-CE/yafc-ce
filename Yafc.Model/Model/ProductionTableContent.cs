@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Yafc.Core;
 using Yafc.I18n;
 using Yafc.UI;
 
@@ -167,12 +168,7 @@ public class ModuleTemplate : ModelObject<ModelObject> {
             moduleCount += element.fixedCount;
         }
 
-        if (moduleCount == 0) {
-            // C# division rounds to zero, causing the round-up math below to return 1 in most cases, instead of 0.
-            return 0;
-        }
-
-        return ((moduleCount - 1) / beacon.target.moduleSlots) + 1;
+        return IntegerMath.CeilingDivide(moduleCount, beacon.target.moduleSlots);
     }
 
     /// <summary>
@@ -776,6 +772,65 @@ public sealed class RecipeRow : ModelObject<ProductionTable>, IGroupedElement<Pr
                     return;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Apply a default module when this row uses a single-category module building and no template was selected.
+    /// The chosen module is based upon the unlock order and what milestones are currently unlocked. No secondary sort on prod/speed to keep the code simpler
+    /// </summary>
+    public void AutoApplySingleCategoryModule() {
+        //Don't change anything if existing modules are set
+        if (modules != null) {
+            return;
+        }
+
+        //Basic safety checks
+        if (recipe is null || entity is null || entity.target.moduleSlots <= 0) {
+            return;
+        }
+
+        if (recipe.target is not Recipe targetRecipe) {
+            return;
+        }
+
+        if (entity.target.allowedModuleCategories is not [string moduleCategory]) {
+            return;
+        }
+
+        IObjectWithQuality<Module>? bestModule = null;
+        Bits bestUnlockOrder = default;
+
+        //Loop over all modules finding the one that is usable, unlocked, and unlocks latest according to milestones
+        foreach (Module module in Database.allModules) {
+            //Check module is in the building's allowed category
+            if (module.moduleSpecification.category != moduleCategory) {
+                continue;
+            }
+
+            //Check the recipe allows this module
+            if (!entity.target.CanAcceptModule(module.moduleSpecification) || !recipe.target.CanAcceptModule(module)) {
+                continue;
+            }
+
+            //Check if this module is currently available with the active milestones
+            if (!module.IsAccessibleWithCurrentMilestones()) {
+                continue;
+            }
+
+            //Update if this module is better (milestone order)
+            Bits moduleMilestoneOrder = Milestones.Instance.GetMilestoneResult(module.id);
+            if (bestModule == null || moduleMilestoneOrder > bestUnlockOrder) {
+                bestModule = module.With(Quality.MaxAccessible);
+                bestUnlockOrder = moduleMilestoneOrder;
+            }
+        }
+
+        //We have a working module, fill all the module slots
+        if (bestModule != null) {
+            modules = new ModuleTemplateBuilder {
+                list = [(bestModule, 0)]
+            }.Build(this);
         }
     }
 

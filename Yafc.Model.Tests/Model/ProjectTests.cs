@@ -23,6 +23,10 @@ public class ProjectTests {
         Assert.Equal(0u, project.unsavedChangesCount);
     }
 
+    [Fact]
+    public void PerformAutoSave_NoThrowWhenLoadedWithEmptyString()
+        => Project.ReadFromFile("", new(), false).PerformAutoSave();
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -161,6 +165,58 @@ public class ProjectTests {
 
 
     [Fact]
+    public void Save_FlushesSuspendedUndoBatchBeforeMarkingVersionSaved() {
+        string path = CreateTestProjectPath();
+        try {
+            Project project = new Project();
+            project.Save(path);
+            project.undo.Suspend();
+
+            project.preferences.RecordUndo().time = 60;
+            project.Save(path);
+
+            Assert.Equal(0u, project.unsavedChangesCount);
+
+            project.preferences.RecordUndo().time = 3600;
+
+            Assert.True(project.unsavedChangesCount > 0);
+
+            Assert.Contains("\"time\": 60", File.ReadAllText(path));
+        }
+        finally {
+            DeleteProjectAndAutosaves(path);
+        }
+    }
+
+    [Fact]
+    public void PerformAutoSave_FlushesSuspendedUndoBatchBeforeMarkingVersionAutosaved() {
+        string path = CreateTestProjectPath();
+        try {
+            Project project = new Project();
+            project.Save(path);
+            project.undo.Suspend();
+
+            project.preferences.RecordUndo().time = 60;
+            project.PerformAutoSave();
+            project.preferences.RecordUndo().time = 3600;
+            project.PerformAutoSave();
+
+            Assert.Contains("\"time\": 3600", File.ReadAllText(Project.GenerateAutosavePath(path, 2)));
+        }
+        finally {
+            DeleteProjectAndAutosaves(path);
+        }
+    }
+
+    [Fact]
+    public void PerformAutoSave_NewUnattachedProject_DoesNotFlushSuspendedUndoBatch()
+        => AssertPerformAutoSaveDoesNotFlushSuspendedUndoBatch(new Project());
+
+    [Fact]
+    public void PerformAutoSave_LoadedWithEmptyString_DoesNotFlushSuspendedUndoBatch()
+        => AssertPerformAutoSaveDoesNotFlushSuspendedUndoBatch(Project.ReadFromFile("", new(), false));
+
+    [Fact]
     public void AutosaveInDotYafcDirectory_DoesNotModifyDirectory()
         // Use Path.Combine to generate host-native path separators. (GenerateAutosavePath coincidentally converts separators.)
         => Assert.Equal(Path.Combine("home", ".yafc", "ProjectName-autosave-1.yafc"), Project.GenerateAutosavePath("home/.yafc/ProjectName.yafc", 1));
@@ -181,5 +237,23 @@ public class ProjectTests {
         for (int i = 1; i <= 5; i++) {
             File.Delete(Project.GenerateAutosavePath(path, i));
         }
+    }
+
+    private static void AssertPerformAutoSaveDoesNotFlushSuspendedUndoBatch(Project project) {
+        project.undo.Suspend();
+
+        project.preferences.RecordUndo().time = 60;
+
+        Assert.True(project.undo.HasChangesPending(project.preferences));
+        Assert.False(project.undo.CanUndo);
+
+        project.PerformAutoSave();
+
+        Assert.True(project.undo.HasChangesPending(project.preferences));
+        Assert.False(project.undo.CanUndo);
+
+        project.preferences.RecordUndo().time = 3600;
+        project.undo.Resume();
+        Assert.True(project.undo.CanUndo);
     }
 }

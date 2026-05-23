@@ -23,9 +23,12 @@ Version:
 Date:
     Features:
         - Improve early-startup error logging
+        - Automatically apply single use modules to recipes. e.g. Autoamtically fill PyAL buildings with appropriate module for the current milestone
         - Extended main window title - append current project name (with * indicator for unsaved changes).
         - Main dropdown - disable Save/Undo when there is nothing to do.
     Fixes:
+        - Fix loading Tricky Old Nick and other mods that forget to declare that rocket launch products are items.
+        - Fix loading mods that set some properties to "" (the 'default' value) instead of nil.
     Internal changes:
         - Rename SettingsDropdown to MainDropdown.
         - Rename LoadProjectHeavy to ReturnToWelcomeScreen.

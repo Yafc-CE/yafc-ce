@@ -31,7 +31,7 @@ internal partial class FactorioDataDeserializer {
     /// <seealso cref="GetObject{TReturn}(string)"/>
     private bool GetRef<TReturn>(LuaTable table, string key, [NotNullWhen(true)] out TReturn? result) where TReturn : FactorioObject, new() {
         result = null;
-        if (!table.Get(key, out string? name)) {
+        if (!table.Get(key, out string? name) || string.IsNullOrEmpty(name)) {
             return false;
         }
 
@@ -296,11 +296,12 @@ internal partial class FactorioDataDeserializer {
                 cache[(".", digit.ToString())] = SDL_image.IMG_Load("Data/Digits/" + digit + ".png");
             }
 
-            DataUtils.NoFuelIcon = CreateSimpleIcon(cache, "fuel-icon-red");
-            DataUtils.WarningIcon = CreateSimpleIcon(cache, "warning-icon");
-            DataUtils.HandIcon = CreateSimpleIcon(cache, "hand");
+            SystemIcons.Initialize(
+                noFuelIcon: CreateSimpleIcon(cache, "fuel-icon-red"),
+                warningIcon: CreateSimpleIcon(cache, "warning-icon"),
+                handIcon: CreateSimpleIcon(cache, "hand"));
 
-            Dictionary<string, Icon> simpleSpritesCache = [];
+            Dictionary<string, int> simpleSpritesCache = [];
             int rendered = 0;
 
             foreach (var o in allObjects) {
@@ -311,16 +312,16 @@ internal partial class FactorioDataDeserializer {
                 if (o.iconSpec != null && o.iconSpec.Length > 0) {
                     bool simpleSprite = o.iconSpec.Length == 1 && o.iconSpec[0].IsSimple();
 
-                    if (simpleSprite && simpleSpritesCache.TryGetValue(o.iconSpec[0].path, out var icon)) {
-                        o.icon = icon;
+                    if (simpleSprite && simpleSpritesCache.TryGetValue(o.iconSpec[0].path, out int iconId)) {
+                        o.iconId = iconId;
                         continue;
                     }
 
                     try {
-                        o.icon = CreateIconFromSpec(cache, o.iconSpec);
+                        o.iconId = (int)CreateIconFromSpec(cache, o.iconSpec);
 
                         if (simpleSprite) {
-                            simpleSpritesCache[o.iconSpec[0].path] = o.icon;
+                            simpleSpritesCache[o.iconSpec[0].path] = o.iconId;
                         }
                     }
                     catch (Exception ex) {
@@ -328,7 +329,7 @@ internal partial class FactorioDataDeserializer {
                     }
                 }
                 else if (o is Recipe recipe && recipe.mainProduct != null) {
-                    o.icon = recipe.mainProduct.icon;
+                    o.iconId = recipe.mainProduct.iconId;
                 }
             }
         }
@@ -583,10 +584,10 @@ internal partial class FactorioDataDeserializer {
             || factorioVersion < v2_0) {
 
             if (table.Get("rocket_launch_product", out LuaTable? product)) {
-                launchProducts = [LoadProduct("rocket_launch_product", item.stackSize)(product)];
+                launchProducts = [LoadProduct("rocket_launch_product", item.stackSize, isAlwaysItem: true)(product)];
             }
             else if (table.Get("rocket_launch_products", out LuaTable? products)) {
-                launchProducts = [.. products.ArrayElements<LuaTable>().Select(LoadProduct(item.typeDotName, item.stackSize))];
+                launchProducts = [.. products.ArrayElements<LuaTable>().Select(LoadProduct(item.typeDotName, item.stackSize, isAlwaysItem: true))];
             }
             else if (factorioVersion >= v2_0) {
                 launchProducts = [];
@@ -816,10 +817,11 @@ nextWeightCalculation:;
         fluid.temperatureRange = new TemperatureRange(table.Get("default_temperature", 0), table.Get("max_temperature", 0));
     }
 
-    private Goods? LoadItemOrFluid(LuaTable table, bool useTemperature) {
-        if (table.Get("type", out string? type)) {
+    private Goods? LoadItemOrFluid(LuaTable table, bool useTemperature, bool isAlwaysItem) {
+        string? type = null;
+        if ((factorioVersion >= v2_0 && isAlwaysItem) || table.Get("type", out type)) {
             if (table.Get("name", out string? name)) {
-                if (type == "item") {
+                if (isAlwaysItem || type == "item") {
                     return GetObject<Item>(table);
                 }
                 else if (type == "fluid") {

@@ -45,7 +45,11 @@ public partial class Project : ModelObject {
 
     public event Action<bool>? saveStateChanged;
 
-    public Project() : base(new UndoSystem()) {
+    public Project() : this(new UndoSystem()) { }
+
+    internal Project(IUndoBatchScheduler scheduler) : this(new UndoSystem(scheduler)) { }
+
+    private Project(UndoSystem undo) : base(undo) {
         settings = new ProjectSettings(this);
         preferences = new ProjectPreferences(this);
         base.undo.versionChanged += () => saveStateChanged?.Invoke(needsSave);
@@ -195,6 +199,8 @@ public partial class Project : ModelObject {
     }
 
     public void Save(string fileName) {
+        undo.FlushPendingChanges();
+
         if (lastSavedVersion == projectVersion && fileName == attachedFileName && File.Exists(fileName) && !restoredAutosaveNeedsSave) {
             lastAutoSavedVersion = projectVersion;
             return;
@@ -221,6 +227,8 @@ public partial class Project : ModelObject {
         if (string.IsNullOrWhiteSpace(attachedFileName)) {
             return;
         }
+
+        undo.FlushPendingChanges();
 
         if (hasUnsavedChanges && lastAutoSavedVersion != projectVersion) {
             autosaveIndex = (autosaveIndex % AutosaveRollingLimit) + 1;

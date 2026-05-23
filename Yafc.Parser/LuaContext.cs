@@ -652,7 +652,7 @@ internal partial class LuaContext : IDisposable {
         var result = luaL_loadbufferx(L, in chunk.GetPinnableReference(), chunk.Length, name, null);
 
         if (result != Result.LUA_OK) {
-            throw new LuaException("Loading terminated with code " + result + "\n" + GetString(-1));
+            throw new LuaException("Loading terminated with code " + result + "\n" + PopManagedValue(1));
         }
 
         int argcount = 0;
@@ -666,10 +666,10 @@ internal partial class LuaContext : IDisposable {
 
         if (result != Result.LUA_OK) {
             if (result == Result.LUA_ERRRUN) {
-                throw new LuaException(GetString(-1)!); // null-forgiving: lua_pcallk always pushes a string on error
+                throw new LuaException((string)PopManagedValue(1)!); // null-forgiving: lua_pcallk always pushes a string on error
             }
 
-            throw new LuaException("Execution " + mod + "/" + name + " terminated with code " + result + "\n" + GetString(-1));
+            throw new LuaException("Execution " + mod + "/" + name + " terminated with code " + result + "\n" + PopManagedValue(1));
         }
         return luaL_ref(L, REGISTRY);
     }

@@ -16,6 +16,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Yafc.I18n\Yafc.I18n.csproj" />
+      <ProjectReference Include="..\Yafc.Core\Yafc.Core.csproj" />
     </ItemGroup>
 
 </Project>

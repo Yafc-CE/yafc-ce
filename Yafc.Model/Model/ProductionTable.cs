@@ -291,6 +291,7 @@ match:
         }
 
         recipeRow.AutoApplyModuleTemplate(Project.current.sharedModuleTemplates);
+        recipeRow.AutoApplySingleCategoryModule();
     }
 
     private static EntityCrafter? GetSelectedFuelCrafter(RecipeOrTechnology recipe, IObjectWithQuality<Goods>? selectedFuel) =>

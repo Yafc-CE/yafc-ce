@@ -30,9 +30,10 @@ public class ProductionSummaryView : ProjectPageView<ProductionSummary> {
         public override void BuildElement(ImGui gui, ProductionSummaryEntry row) {
             gui.allocator = RectAllocator.Center;
             gui.spacing = 0f;
-            if (row.subgroup != null) {
-                if (gui.BuildButton(row.subgroup.expanded ? Icon.ChevronDown : Icon.ChevronRight)) {
-                    row.subgroup.RecordChange().expanded = !row.subgroup.expanded;
+            if (row.IsSubgroup) {
+                var subgroup = row.subgroup;
+                if (gui.BuildButton(subgroup.expanded ? Icon.ChevronDown : Icon.ChevronRight)) {
+                    subgroup.RecordChange().expanded = !subgroup.expanded;
                     view.flatHierarchy.SetData(view.model.group);
                 }
             }
@@ -65,7 +66,9 @@ public class ProductionSummaryView : ProjectPageView<ProductionSummary> {
 
         private GuiBuilder AddProductionTableDropdown(SearchableList<ProjectPage> pagesDropdown) => gui => {
             using (gui.EnterGroup(new Padding(1f))) {
-                if (gui.BuildSearchBox(productionTableSearchQuery, out productionTableSearchQuery)) {
+                string searchText = productionTableSearchQuery.query;
+                if (gui.BuildSearchBox(searchText, out string newSearchText)) {
+                    productionTableSearchQuery = new SearchQuery(newSearchText);
                     pagesDropdown.filter = productionTableSearchQuery;
                 }
             }
@@ -75,21 +78,22 @@ public class ProductionSummaryView : ProjectPageView<ProductionSummary> {
         public override void BuildElement(ImGui gui, ProductionSummaryEntry entry) {
             gui.allocator = RectAllocator.LeftAlign;
 
-            if (entry.subgroup != null) {
-                if (entry.subgroup.expanded) {
-                    BuildButtons(gui, 1.5f, entry.subgroup);
+            if (entry.IsSubgroup) {
+                var subgroup = entry.subgroup;
+                if (subgroup.expanded) {
+                    BuildButtons(gui, 1.5f, subgroup);
                 }
                 else {
-                    if (gui.BuildTextInput(entry.subgroup.name, out string newText, LSs.LegacySummaryGroupNameHint, delayed: true)) {
-                        entry.subgroup.RecordUndo().name = newText;
+                    if (gui.BuildTextInput(subgroup.name, out string newText, LSs.LegacySummaryGroupNameHint, delayed: true)) {
+                        subgroup.RecordUndo().name = newText;
                     }
                 }
             }
             else if (entry.page != null) { // The constructor should have thrown if this check fails, but it helps the nullability analysis
                 using (gui.EnterGroup(new Padding(0.3f), RectAllocator.LeftRow, SchemeColor.None, 0.2f)) {
-                    var icon = entry.icon;
+                    Icon icon = entry.IsMissingPage ? Icon.Warning : entry.page.page!.icon?.GetIcon() ?? Icon.None;
                     if (icon != Icon.None) {
-                        gui.BuildIcon(entry.icon);
+                        gui.BuildIcon(icon);
                     }
 
                     gui.BuildText(entry.name);
@@ -129,7 +133,7 @@ public class ProductionSummaryView : ProjectPageView<ProductionSummary> {
         private static VirtualScrollList<ProjectPage>.Drawer PagesDropdownDrawer(ProductionSummaryGroup group) => (gui, element, _) => {
             using (gui.EnterGroup(new Padding(1f, 0.25f), RectAllocator.LeftRow)) {
                 if (element.icon != null) {
-                    gui.BuildIcon(element.icon.icon);
+                    gui.BuildIcon(element.icon.GetIcon());
                 }
 
                 gui.RemainingRow().BuildText(element.name, TextBlockDisplayStyle.Default(element.visible ? SchemeColor.BackgroundText : SchemeColor.BackgroundTextFaint));
@@ -189,7 +193,7 @@ public class ProductionSummaryView : ProjectPageView<ProductionSummary> {
 
                 if (!view.model.columnsExist.Contains(goods)) {
                     grid.Next();
-                    var evt = gui.BuildButton(goods.target.icon, amount > 0f ? SchemeColor.Green : SchemeColor.None, size: 1.5f);
+                    var evt = gui.BuildButton(goods.target.GetIcon(), amount > 0f ? SchemeColor.Green : SchemeColor.None, size: 1.5f);
                     if (evt == ButtonEvent.Click) {
                         view.AddOrRemoveColumn(goods);
                     }

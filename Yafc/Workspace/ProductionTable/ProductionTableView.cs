@@ -332,8 +332,10 @@ goodsHaveNoProduction:;
 
                 goods.Add((flow.goods, rounded));
             }
-
-            _ = SDL.SDL_SetClipboardText(BlueprintUtilities.ExportConstantCombinators(view.projectPage!.name, goods)); // null-forgiving: An active view always has an active page.
+            _ = SDL.SDL_SetClipboardText(BlueprintUtilities.ExportConstantCombinators(
+                view.projectPage!.name, // null-forgiving: An active view always has an active page.
+                goods,
+                format: BlueprintClipboardContext.RequestedFormat));
         }
     }
 
@@ -607,7 +609,8 @@ goodsHaveNoProduction:;
                             }
 
                             BlueprintString bp = new BlueprintString(recipe.recipe.target.locName) { blueprint = { entities = { entity } } };
-                            _ = SDL.SDL_SetClipboardText(bp.ToBpString());
+                            BlueprintFormat bpFormat = BlueprintClipboardContext.RequestedFormat;
+                            _ = SDL.SDL_SetClipboardText(bp.ToBpString(bpFormat));
                         }
                     }
 
@@ -666,7 +669,11 @@ goodsHaveNoProduction:;
                     .GetRecipesRecursive()
                     .DistinctBy(row => (row.entity, row.recipe, includeFuel ? row.fuel : null));
 
-                _ = SDL.SDL_SetClipboardText(BlueprintUtilities.ExportRecipiesAsBlueprint(view.projectPage!.name, uniqueEntites, includeFuel));
+                _ = SDL.SDL_SetClipboardText(BlueprintUtilities.ExportRecipiesAsBlueprint(
+                    view.projectPage!.name, // null-forgiving: An active view always has an active page.
+                    uniqueEntites,
+                    includeFuel,
+                    format: BlueprintClipboardContext.RequestedFormat));
             }
         }
     }
@@ -730,7 +737,7 @@ goodsHaveNoProduction:;
             => moduleTemplateList = new VirtualScrollList<ProjectModuleTemplate>(15f, new Vector2(20f, 2.5f), ModuleTemplateDrawer, collapsible: true);
 
         private void ModuleTemplateDrawer(ImGui gui, ProjectModuleTemplate element, int index) {
-            var evt = gui.BuildContextMenuButton(element.name, icon: element.icon?.icon ?? default, disabled: !element.template.IsCompatibleWith(editingRecipeModules));
+            var evt = gui.BuildContextMenuButton(element.name, icon: element.icon?.GetIcon() ?? default, disabled: !element.template.IsCompatibleWith(editingRecipeModules));
 
             if (evt == ButtonEvent.Click && gui.CloseDropdown()) {
                 var copied = JsonUtils.Copy(element.template, editingRecipeModules, null);
