@@ -163,6 +163,35 @@ public class ProjectTests {
         }
     }
 
+    [Fact]
+    public void PerformAutoSave_MissingAttachedFile_CreatesSingleAutosaveWithoutModelEdit() {
+        string path = CreateTestProjectPath();
+        try {
+            Project savedProject = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Model.ProductionTableContentTests.lua");
+            savedProject.Save(path);
+
+            Project project = Project.ReadFromFile(path, new(), false);
+            File.Delete(path);
+
+            Assert.True(project.hasUnsavedChanges);
+
+            project.PerformAutoSave();
+            project.PerformAutoSave();
+
+            Assert.True(File.Exists(Project.GenerateAutosavePath(path, 1)));
+            Assert.False(File.Exists(Project.GenerateAutosavePath(path, 2)));
+
+            project.preferences.RecordUndo().time = 60;
+            project.PerformAutoSave();
+
+            Assert.True(File.Exists(Project.GenerateAutosavePath(path, 2)));
+            Assert.Contains("\"time\": 60", File.ReadAllText(Project.GenerateAutosavePath(path, 2)));
+        }
+        finally {
+            DeleteProjectAndAutosaves(path);
+        }
+    }
+
 
     [Fact]
     public void Save_FlushesSuspendedUndoBatchBeforeMarkingVersionSaved() {

@@ -27,6 +27,7 @@ public partial class Project : ModelObject {
     public new UndoSystem undo => base.undo;
     private uint lastSavedVersion;
     private uint lastAutoSavedVersion;
+    private bool lastAutoSaveCoveredMissingFile;
     private bool restoredAutosaveNeedsSave;
 
     private uint versionUnsavedChangesCount => projectVersion - lastSavedVersion;
@@ -203,6 +204,7 @@ public partial class Project : ModelObject {
 
         if (lastSavedVersion == projectVersion && fileName == attachedFileName && File.Exists(fileName) && !restoredAutosaveNeedsSave) {
             lastAutoSavedVersion = projectVersion;
+            lastAutoSaveCoveredMissingFile = false;
             return;
         }
 
@@ -213,6 +215,7 @@ public partial class Project : ModelObject {
         attachedFileName = fileName;
         lastSavedVersion = projectVersion;
         lastAutoSavedVersion = projectVersion;
+        lastAutoSaveCoveredMissingFile = false;
         restoredAutosaveNeedsSave = false;
 
         saveStateChanged?.Invoke(needsSave);
@@ -230,7 +233,8 @@ public partial class Project : ModelObject {
 
         undo.FlushPendingChanges();
 
-        if (hasUnsavedChanges && lastAutoSavedVersion != projectVersion) {
+        bool missingFileNeedsAutosave = attachedFileMissing && !lastAutoSaveCoveredMissingFile;
+        if (hasUnsavedChanges && (lastAutoSavedVersion != projectVersion || missingFileNeedsAutosave)) {
             autosaveIndex = (autosaveIndex % AutosaveRollingLimit) + 1;
             var fileName = GenerateAutosavePath(attachedFileName, autosaveIndex);
 
@@ -239,6 +243,7 @@ public partial class Project : ModelObject {
             }
 
             lastAutoSavedVersion = projectVersion;
+            lastAutoSaveCoveredMissingFile = attachedFileMissing;
         }
     }
 
