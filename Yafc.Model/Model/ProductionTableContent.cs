@@ -996,6 +996,10 @@ public class ProductionLink(ProductionTable group, IObjectWithQuality<Goods> goo
 public sealed record SelectedSurface {
     public Location? planet { get; set; }
     public Surface? platform { get; set; }
+    /// <summary>
+    /// Gets the appropriate object for testing <see cref="Recipe.craftingSurfaces"/> and <see cref="Entity.buildSurfaces"/>.
+    /// </summary>
+    public Location? CraftingSurface => platform ?? planet;
 }
 
 /// <summary>

@@ -141,10 +141,17 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
                 nextRowTextColor = SchemeColor.BackgroundText;
             }
 
-            bool isError = recipe is RecipeRow r && r.warningFlags >= WarningFlags.EntityNotSpecified;
+            bool isWarning = recipe is RecipeRow { warningFlags: > WarningFlags.MaximumForMessage };
+            bool isError = recipe is RecipeRow { warningFlags: > WarningFlags.MaximumForWarning };
             if (isError) {
                 nextRowBackgroundColor = SchemeColor.Error;
                 nextRowTextColor = SchemeColor.PureForeground;
+                nextRowIsHighlighted = true;
+            }
+            else if (isWarning) {
+                nextRowBackgroundColor = SchemeColor.WarningAlt;
+                nextRowTextColor = SchemeColor.WarningText;
+                nextRowIsHighlighted = true;
             }
 
             if (recipe != null) {
@@ -175,7 +182,7 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
                         MoveFlatHierarchy(gui.GetDraggingObject<TRow>()!, recipe);
                     }
 
-                    if (nextRowIsHighlighted || isError) {
+                    if (nextRowIsHighlighted) {
                         rect.X += depWidth;
                         rect.Width -= depWidth;
                         gui.DrawRectangle(rect, nextRowBackgroundColor);

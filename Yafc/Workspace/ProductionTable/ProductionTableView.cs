@@ -56,11 +56,15 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
             }
 
             if (row.warningFlags != 0) {
-                bool isError = row.warningFlags >= WarningFlags.EntityNotSpecified;
+                bool isWarning = row.warningFlags > WarningFlags.MaximumForMessage;
+                bool isError = row.warningFlags > WarningFlags.MaximumForWarning;
                 ButtonEvent evt;
 
                 if (isError) {
-                    evt = gui.BuildRedButton(Icon.Error, invertedColors: true);
+                    evt = gui.BuildIconButton(Icon.Error, SchemeColor.Background, SchemeColor.Error);
+                }
+                else if (isWarning) {
+                    evt = gui.BuildIconButton(Icon.Warning, SchemeColor.Background, SchemeColor.WarningAlt);
                 }
                 else {
                     using (gui.EnterGroup(ImGuiUtils.DefaultIconPadding)) {
@@ -75,6 +79,10 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                         if (isError) {
                             g.boxColor = SchemeColor.Error;
                             g.textColor = SchemeColor.ErrorText;
+                        }
+                        else if (isWarning) {
+                            g.boxColor = SchemeColor.WarningAlt;
+                            g.textColor = SchemeColor.WarningText;
                         }
                         foreach (var (flag, key) in WarningsMeaning) {
                             if ((row.warningFlags & flag) != 0) {
@@ -1602,22 +1610,25 @@ goodsHaveNoProduction:;
 
     private static readonly Dictionary<WarningFlags, LocalizableString0> WarningsMeaning = new()
     {
-        {WarningFlags.DeadlockCandidate, LSs.WarningDescriptionDeadlockCandidate},
-        {WarningFlags.OverproductionRequired, LSs.WarningDescriptionOverproductionRequired},
-        {WarningFlags.EntityNotSpecified, LSs.WarningDescriptionEntityNotSpecified},
-        {WarningFlags.FuelNotSpecified, LSs.WarningDescriptionFuelNotSpecified},
-        {WarningFlags.FuelWithTemperatureNotLinked, LSs.WarningDescriptionFluidWithTemperature},
-        {WarningFlags.FuelTemperatureExceedsMaximum, LSs.WarningDescriptionFluidTooHot},
-        {WarningFlags.FuelDoesNotProvideEnergy, LSs.WarningDescriptionFuelDoesNotProvideEnergy},
-        {WarningFlags.FuelUsageInputLimited, LSs.WarningDescriptionHasMaxFuelConsumption},
-        {WarningFlags.TemperatureForIngredientNotMatch, LSs.WarningDescriptionIngredientTemperatureRange},
-        {WarningFlags.ReactorsNeighborsFromPrefs, LSs.WarningDescriptionAssumesReactorFormation},
         {WarningFlags.AssumesNauvisSolarRatio, LSs.WarningDescriptionAssumesNauvisSolar},
-        {WarningFlags.ExceedsBuiltCount, LSs.WarningDescriptionNeedsMoreBuildings},
+        {WarningFlags.ReactorsNeighborsFromPrefs, LSs.WarningDescriptionAssumesReactorFormation},
+        {WarningFlags.FuelUsageInputLimited, LSs.WarningDescriptionHasMaxFuelConsumption},
         {WarningFlags.AsteroidCollectionNotModelled, LSs.WarningDescriptionAsteroidCollectors},
         {WarningFlags.AssumesFulgoraAndModel, LSs.WarningDescriptionAssumesFulgoranLightning},
         {WarningFlags.UselessQuality, LSs.WarningDescriptionUselessQuality},
         {WarningFlags.ExcessProductivity, LSs.WarningDescriptionExcessProductivityBonus},
+        {WarningFlags.RecipeNotAllowed, LSs.WarningDescriptionRecipeNotAllowed},
+        {WarningFlags.EntityNotAllowed, LSs.WarningDescriptionEntityNotAllowed},
+
+        {WarningFlags.EntityNotSpecified, LSs.WarningDescriptionEntityNotSpecified},
+        {WarningFlags.FuelNotSpecified, LSs.WarningDescriptionFuelNotSpecified},
+        {WarningFlags.FuelTemperatureExceedsMaximum, LSs.WarningDescriptionFluidTooHot},
+        {WarningFlags.FuelDoesNotProvideEnergy, LSs.WarningDescriptionFuelDoesNotProvideEnergy},
+        {WarningFlags.FuelWithTemperatureNotLinked, LSs.WarningDescriptionFluidWithTemperature},
+
+        {WarningFlags.DeadlockCandidate, LSs.WarningDescriptionDeadlockCandidate},
+        {WarningFlags.OverproductionRequired, LSs.WarningDescriptionOverproductionRequired},
+        {WarningFlags.ExceedsBuiltCount, LSs.WarningDescriptionNeedsMoreBuildings},
     };
 
     private static readonly (Icon icon, SchemeColor color)[] tagIcons = [

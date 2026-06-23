@@ -15,20 +15,23 @@ public enum WarningFlags {
     UselessQuality = 1 << 5,
     ExcessProductivity = 1 << 6,
 
+    MaximumForMessage = RecipeNotAllowed - 1,
+    // Warnings
+    RecipeNotAllowed = 1 << 11,
+    EntityNotAllowed = 1 << 12,
+
+    MaximumForWarning = EntityNotSpecified - 1,
     // Static errors
-    EntityNotSpecified = 1 << 8,
-    FuelNotSpecified = 1 << 9,
-    FuelTemperatureExceedsMaximum = 1 << 10,
-    FuelDoesNotProvideEnergy = 1 << 11,
-    FuelWithTemperatureNotLinked = 1 << 12,
+    EntityNotSpecified = 1 << 17,
+    FuelNotSpecified = 1 << 18,
+    FuelTemperatureExceedsMaximum = 1 << 19,
+    FuelDoesNotProvideEnergy = 1 << 20,
+    FuelWithTemperatureNotLinked = 1 << 21,
 
     // Solution errors
-    DeadlockCandidate = 1 << 16,
-    OverproductionRequired = 1 << 17,
-    ExceedsBuiltCount = 1 << 18,
-
-    // Not implemented warnings
-    TemperatureForIngredientNotMatch = 1 << 24,
+    DeadlockCandidate = 1 << 26,
+    OverproductionRequired = 1 << 27,
+    ExceedsBuiltCount = 1 << 28,
 }
 
 public class UsedModule {
@@ -181,6 +184,24 @@ internal class RecipeParameters(float recipeTime, float fuelUsagePerSecondPerBui
             if (recipe.target is Recipe { maximumProductivity: float maxProd } && activeEffects.productivity > maxProd) {
                 warningFlags |= WarningFlags.ExcessProductivity;
                 activeEffects.productivity = maxProd;
+            }
+
+            if (row.linkRoot.effectiveSurface.CraftingSurface is { } surface) {
+                if (recipe.target is Recipe { craftingSurfaces: { } surfaces } && !surfaces.Contains(surface)) {
+                    warningFlags |= WarningFlags.RecipeNotAllowed;
+                }
+                else if (recipe.target is { sourceEntity.factorioType: "asteroid-chunk" }) {
+                    if (surface.factorioType is not "surface") {
+                        warningFlags |= WarningFlags.RecipeNotAllowed;
+                    }
+                }
+                else if (recipe.target is { sourceEntity.spawnLocations: { } spawns } && !spawns.Contains(surface)) {
+                    warningFlags |= WarningFlags.RecipeNotAllowed;
+                }
+
+                if (row.entity?.target.buildSurfaces is { } buildSurfaces && !buildSurfaces.Contains(surface)) {
+                    warningFlags |= WarningFlags.EntityNotAllowed;
+                }
             }
 
             recipeTime /= activeEffects.speedMod;

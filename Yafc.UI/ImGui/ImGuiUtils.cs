@@ -176,20 +176,29 @@ public static class ImGuiUtils {
         return evt;
     }
 
-    public static ButtonEvent BuildRedButton(this ImGui gui, Icon icon, float size = 1.5f, bool invertedColors = false) {
+    /// <summary>
+    /// Draw a button that displays an icon and inverts its colors when hovered.
+    /// </summary>
+    /// <param name="icon">The <see cref="Icon"/> to draw.</param>
+    /// <param name="iconColor">The color to use when drawing the icon.</param>
+    /// <param name="backColor">The color to use when drawing the background.</param>
+    /// <param name="size">The size of the icon. The button will be slightly larger.</param>
+    /// <remarks><paramref name="iconColor"/> and <paramref name="backColor"/> swap meanings when the mouse is hovering over this button.</remarks>
+    /// <returns>A <see cref="ButtonEvent"/> describing the user's interaction with the button.</returns>
+    public static ButtonEvent BuildIconButton(this ImGui gui, Icon icon, SchemeColor iconColor, SchemeColor backColor, float size = 1.5f) {
         Rect iconRect;
 
         using (gui.EnterGroup(new Padding(0.3f))) {
             iconRect = gui.AllocateRect(size, size, RectAlignment.Middle);
         }
 
-        var evt = gui.BuildButton(gui.lastRect, SchemeColor.None, SchemeColor.Error);
+        var evt = gui.BuildButton(gui.lastRect, backColor, iconColor);
 
         if (gui.isBuilding) {
-            SchemeColor color = invertedColors ? SchemeColor.ErrorText : SchemeColor.Error;
+            SchemeColor color = iconColor;
 
             if (gui.IsMouseOver(gui.lastRect)) {
-                color = invertedColors ? SchemeColor.Error : SchemeColor.ErrorText;
+                color = backColor;
             }
 
             gui.DrawIcon(iconRect, icon, color);
