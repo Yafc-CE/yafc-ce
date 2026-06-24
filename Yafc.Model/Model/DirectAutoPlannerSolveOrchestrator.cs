@@ -7,6 +7,7 @@ namespace Yafc.Model;
 /// </summary>
 /// <remarks>
 /// Headless and test callers run capture, compute, and commit inline without background scheduling.
+/// Keep the capture/compute/commit sequence in sync with UiAutoPlannerSolveOrchestrator; only scheduling differs.
 /// </remarks>
 public sealed class DirectAutoPlannerSolveOrchestrator : IAutoPlannerSolveOrchestrator {
     /// <summary>

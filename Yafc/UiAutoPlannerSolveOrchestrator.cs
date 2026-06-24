@@ -8,6 +8,7 @@ namespace Yafc;
 /// </summary>
 /// <remarks>
 /// Capture and commit run on the foreground model context, while compute runs on a background thread.
+/// Keep the capture/compute/commit sequence in sync with DirectAutoPlannerSolveOrchestrator; only scheduling differs.
 /// </remarks>
 public sealed class UiAutoPlannerSolveOrchestrator : IAutoPlannerSolveOrchestrator {
     /// <summary>
