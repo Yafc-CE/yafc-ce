@@ -39,23 +39,39 @@ public class AutoPlanner(ModelObject page) : ProjectPageContents(page) {
 
     public override Task<string?> Solve(ProjectPage page) => page.owner.autoPlannerSolveOrchestrator.SolveAsync(page, this);
 
-    internal async Task<string?> SolveDirectAsync(ProjectPage page) {
+    public AutoPlannerSolveInput CaptureSolveInput() {
+        return new AutoPlannerSolveInput(
+            [.. goals.Select(goal => new AutoPlannerGoalSnapshot(goal.item, goal.amount))],
+            [.. roots],
+            [.. Database.recipes.all.Select(recipe => new AutoPlannerRecipeSnapshot(
+                recipe,
+                recipe.IsAccessibleWithCurrentMilestones(),
+                recipe.RecipeBaseCost()))]);
+    }
+
+    public static AutoPlannerSolveResult ComputeSolveResult(AutoPlannerSolveInput input) {
         var processedGoods = Database.goods.CreateMapping<Constraint>();
         var processedRecipes = Database.recipes.CreateMapping<Variable>();
+        var recipeAccessibility = Database.recipes.CreateMapping<bool>();
+        var recipeBaseCosts = Database.recipes.CreateMapping<float>();
         Queue<Goods> processingStack = new Queue<Goods>();
-        var bestFlowSolver = DataUtils.CreateSolver();
+        using var bestFlowSolver = DataUtils.CreateSolver();
         var rootConstraint = bestFlowSolver.MakeConstraint();
 
-        foreach (var root in roots) {
+        foreach (var recipe in input.recipes) {
+            recipeAccessibility[recipe.recipe] = recipe.isAccessible;
+            recipeBaseCosts[recipe.recipe] = recipe.baseCost;
+        }
+
+        foreach (var root in input.roots) {
             processedGoods[root] = rootConstraint;
         }
 
-        foreach (var goal in goals) {
+        foreach (var goal in input.goals) {
             processedGoods[goal.item] = bestFlowSolver.MakeConstraint(goal.amount, double.PositiveInfinity, goal.item.name);
             processingStack.Enqueue(goal.item);
         }
 
-        await Ui.ExitMainThread();
         var objective = bestFlowSolver.Objective();
         objective.SetMinimization();
         processingStack.Enqueue(null); // depth marker;
@@ -74,7 +90,7 @@ public class AutoPlanner(ModelObject page) : ProjectPageContents(page) {
             var constraint = processedGoods[item];
 
             foreach (var recipe in item.production) {
-                if (!recipe.IsAccessibleWithCurrentMilestones()) {
+                if (!recipeAccessibility[recipe]) {
                     continue;
                 }
 
@@ -84,7 +100,7 @@ public class AutoPlanner(ModelObject page) : ProjectPageContents(page) {
                 else {
                     allRecipes.Add(recipe);
                     var = bestFlowSolver.MakeNumVar(0, double.PositiveInfinity, recipe.name);
-                    objective.SetCoefficient(var, recipe.RecipeBaseCost() * (1 + (depth * 0.5)));
+                    objective.SetCoefficient(var, recipeBaseCosts[recipe] * (1 + (depth * 0.5)));
                     processedRecipes[recipe] = var;
 
                     foreach (var product in recipe.products) {
@@ -119,9 +135,8 @@ public class AutoPlanner(ModelObject page) : ProjectPageContents(page) {
 
         if (solverResult is not Solver.ResultStatus.OPTIMAL and not Solver.ResultStatus.FEASIBLE) {
             logger.Information(bestFlowSolver.ExportModelAsLpFormat(false));
-            this.tiers = null;
 
-            return LSs.AutoPlannerNoSolution;
+            return AutoPlannerSolveResult.NoSolution;
         }
 
         Graph<Recipe> graph = new Graph<Recipe>();
@@ -257,10 +272,18 @@ nope:;
                 upstream = upstream.TryGetValue(x, out var res2) ? res2 : null
             })]);
         }
-        bestFlowSolver.Dispose();
-        await Ui.EnterMainThread();
 
-        this.tiers = [.. tiers];
+        return AutoPlannerSolveResult.Success([.. tiers]);
+    }
+
+    public string? CommitSolveResult(AutoPlannerSolveResult result) {
+        if (result.status == AutoPlannerSolveStatus.NoSolution) {
+            tiers = null;
+
+            return LSs.AutoPlannerNoSolution;
+        }
+
+        tiers = result.tiers;
 
         return null;
     }

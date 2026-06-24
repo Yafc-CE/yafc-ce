@@ -77,6 +77,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         }
         Project.current = project;
         project.modelThreadSwitcher = UiModelThreadSwitcher.Instance;
+        project.autoPlannerSolveOrchestrator = UiAutoPlannerSolveOrchestrator.Instance;
         DataUtils.SetupForProject(project);
         this.project = project;
         if (project.justCreated) {

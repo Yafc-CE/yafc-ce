@@ -7,5 +7,9 @@ public sealed class DirectAutoPlannerSolveOrchestrator : IAutoPlannerSolveOrches
 
     private DirectAutoPlannerSolveOrchestrator() { }
 
-    public Task<string?> SolveAsync(ProjectPage page, AutoPlanner planner) => planner.SolveDirectAsync(page);
+    public Task<string?> SolveAsync(ProjectPage page, AutoPlanner planner) {
+        var input = planner.CaptureSolveInput();
+        var result = AutoPlanner.ComputeSolveResult(input);
+        return Task.FromResult(planner.CommitSolveResult(result));
+    }
 }
