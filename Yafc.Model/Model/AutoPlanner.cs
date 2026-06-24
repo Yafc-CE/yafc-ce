@@ -37,7 +37,9 @@ public class AutoPlanner(ModelObject page) : ProjectPageContents(page) {
 
     public AutoPlannerRecipe[][] tiers { get; private set; }
 
-    public override async Task<string> Solve(ProjectPage page) {
+    public override Task<string?> Solve(ProjectPage page) => page.owner.autoPlannerSolveOrchestrator.SolveAsync(page, this);
+
+    internal async Task<string?> SolveDirectAsync(ProjectPage page) {
         var processedGoods = Database.goods.CreateMapping<Constraint>();
         var processedRecipes = Database.recipes.CreateMapping<Variable>();
         Queue<Goods> processingStack = new Queue<Goods>();

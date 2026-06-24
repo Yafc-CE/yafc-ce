@@ -18,6 +18,7 @@ public partial class Project : ModelObject {
     public ProjectSettings settings { get; }
     public ProjectPreferences preferences { get; }
     [SkipSerialization] public IModelThreadSwitcher modelThreadSwitcher { get; set; } = NoOpModelThreadSwitcher.Instance;
+    [SkipSerialization] public IAutoPlannerSolveOrchestrator autoPlannerSolveOrchestrator { get; set; } = DirectAutoPlannerSolveOrchestrator.Instance;
 
     public List<ProjectModuleTemplate> sharedModuleTemplates { get; } = [];
     public string? yafcVersion { get; set; }
