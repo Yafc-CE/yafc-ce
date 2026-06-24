@@ -6,10 +6,15 @@ namespace Yafc.Model;
 /// Provides the synchronous, headless AutoPlanner solve orchestration.
 /// </summary>
 /// <remarks>
-/// This default implementation captures input, computes the result, and commits it on the caller's flow without
-/// adding background scheduling.
+/// This default implementation composes the shared AutoPlanner solve pipeline with inline scheduling delegates, so
+/// headless and test callers use the same business phases as UI callers without adding background scheduling.
 /// </remarks>
 public sealed class DirectAutoPlannerSolveOrchestrator : IAutoPlannerSolveOrchestrator {
+    private static readonly AutoPlannerSolvePipeline pipeline = new(
+        static capture => ValueTask.FromResult(capture()),
+        static compute => ValueTask.FromResult(compute()),
+        static commit => ValueTask.FromResult(commit()));
+
     /// <summary>
     /// Gets the shared direct orchestrator instance.
     /// </summary>
@@ -18,9 +23,5 @@ public sealed class DirectAutoPlannerSolveOrchestrator : IAutoPlannerSolveOrches
     private DirectAutoPlannerSolveOrchestrator() { }
 
     /// <inheritdoc/>
-    public Task<string?> SolveAsync(ProjectPage page, AutoPlanner planner) {
-        var input = planner.CaptureSolveInput();
-        var result = AutoPlanner.ComputeSolveResult(input);
-        return Task.FromResult(planner.CommitSolveResult(result));
-    }
+    public Task<string?> SolveAsync(ProjectPage page, AutoPlanner planner) => pipeline.SolveAsync(planner);
 }

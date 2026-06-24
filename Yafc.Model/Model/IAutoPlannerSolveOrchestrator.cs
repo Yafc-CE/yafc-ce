@@ -6,8 +6,8 @@ namespace Yafc.Model;
 /// Coordinates the AutoPlanner capture, compute, and commit pipeline.
 /// </summary>
 /// <remarks>
-/// Implementations own where each phase runs. UI and app layers should use this seam to schedule background
-/// computation and foreground commits without changing the planner's solve logic.
+/// Implementations compose <see cref="AutoPlannerSolvePipeline"/> to keep solve phases consistent while varying only
+/// scheduling decisions such as foreground dispatch or background computation.
 /// </remarks>
 public interface IAutoPlannerSolveOrchestrator {
     /// <summary>

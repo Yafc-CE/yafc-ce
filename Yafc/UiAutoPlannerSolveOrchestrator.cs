@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Yafc.Model;
 
 namespace Yafc;
@@ -7,8 +8,8 @@ namespace Yafc;
 /// Orchestrates AutoPlanner solves for the UI application.
 /// </summary>
 /// <remarks>
-/// This implementation captures and commits on the foreground model thread while scheduling compute work on a
-/// background task.
+/// This implementation composes the shared AutoPlanner solve pipeline with UI scheduling delegates: foreground
+/// dispatch for capture and commit, and <see cref="Task.Run"/> for compute.
 /// </remarks>
 public sealed class UiAutoPlannerSolveOrchestrator : IAutoPlannerSolveOrchestrator {
     /// <summary>
@@ -19,18 +20,18 @@ public sealed class UiAutoPlannerSolveOrchestrator : IAutoPlannerSolveOrchestrat
     private UiAutoPlannerSolveOrchestrator() { }
 
     /// <inheritdoc/>
-    public async Task<string?> SolveAsync(ProjectPage page, AutoPlanner planner) {
+    public Task<string?> SolveAsync(ProjectPage page, AutoPlanner planner) {
         var threadSwitcher = page.owner.modelThreadSwitcher;
+        var pipeline = new AutoPlannerSolvePipeline(
+            capture => RunOnForegroundAsync(threadSwitcher, capture),
+            static compute => new ValueTask<AutoPlannerSolveResult>(Task.Run(compute)),
+            commit => RunOnForegroundAsync(threadSwitcher, commit));
 
-        // Capture reads model-owned live state.
+        return pipeline.SolveAsync(planner);
+    }
+
+    private static async ValueTask<T> RunOnForegroundAsync<T>(IModelThreadSwitcher threadSwitcher, Func<T> action) {
         await threadSwitcher.SwitchToForeground();
-        var input = planner.CaptureSolveInput();
-
-        // Task.Run is the explicit background handoff; no SwitchToBackground() is needed.
-        var result = await Task.Run(() => AutoPlanner.ComputeSolveResult(input)).ConfigureAwait(false);
-
-        // Commit mutates model-owned state.
-        await threadSwitcher.SwitchToForeground();
-        return planner.CommitSolveResult(result);
+        return action();
     }
 }
