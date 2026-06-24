@@ -39,6 +39,14 @@ public class AutoPlanner(ModelObject page) : ProjectPageContents(page) {
 
     public override Task<string?> Solve(ProjectPage page) => page.owner.autoPlannerSolveOrchestrator.SolveAsync(page, this);
 
+    /// <summary>
+    /// Captures goals, roots, and recipe state for later AutoPlanner computation.
+    /// </summary>
+    /// <remarks>
+    /// Callers and orchestrators must invoke this method from the foreground model context before scheduling
+    /// <see cref="ComputeSolveResult"/> elsewhere.
+    /// </remarks>
+    /// <returns>The captured solve input to pass to <see cref="ComputeSolveResult"/>.</returns>
     public AutoPlannerSolveInput CaptureSolveInput() {
         return new AutoPlannerSolveInput(
             [.. goals.Select(goal => new AutoPlannerGoalSnapshot(goal.item, goal.amount))],
@@ -49,6 +57,15 @@ public class AutoPlanner(ModelObject page) : ProjectPageContents(page) {
                 recipe.RecipeBaseCost()))]);
     }
 
+    /// <summary>
+    /// Computes an AutoPlanner tier layout from captured input.
+    /// </summary>
+    /// <remarks>
+    /// This phase does not commit changes to a planner, so callers can schedule it away from the foreground model
+    /// thread after capture.
+    /// </remarks>
+    /// <param name="input">The captured solve input.</param>
+    /// <returns>The computed result to commit with <see cref="CommitSolveResult"/>.</returns>
     public static AutoPlannerSolveResult ComputeSolveResult(AutoPlannerSolveInput input) {
         var processedGoods = Database.goods.CreateMapping<Constraint>();
         var processedRecipes = Database.recipes.CreateMapping<Variable>();
@@ -276,6 +293,14 @@ nope:;
         return AutoPlannerSolveResult.Success([.. tiers]);
     }
 
+    /// <summary>
+    /// Applies a computed AutoPlanner result to this planner.
+    /// </summary>
+    /// <remarks>
+    /// Call this from the foreground model context after computation has completed.
+    /// </remarks>
+    /// <param name="result">The result produced by <see cref="ComputeSolveResult"/>.</param>
+    /// <returns>A localized error message when no solution was found; otherwise, <see langword="null"/>.</returns>
     public string? CommitSolveResult(AutoPlannerSolveResult result) {
         if (result.status == AutoPlannerSolveStatus.NoSolution) {
             tiers = null;
