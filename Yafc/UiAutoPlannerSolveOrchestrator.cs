@@ -22,11 +22,14 @@ public sealed class UiAutoPlannerSolveOrchestrator : IAutoPlannerSolveOrchestrat
     public async Task<string?> SolveAsync(ProjectPage page, AutoPlanner planner) {
         var threadSwitcher = page.owner.modelThreadSwitcher;
 
+        // Capture reads model-owned live state.
         await threadSwitcher.SwitchToForeground();
         var input = planner.CaptureSolveInput();
 
+        // Task.Run is the explicit background handoff; no SwitchToBackground() is needed.
         var result = await Task.Run(() => AutoPlanner.ComputeSolveResult(input)).ConfigureAwait(false);
 
+        // Commit mutates model-owned state.
         await threadSwitcher.SwitchToForeground();
         return planner.CommitSolveResult(result);
     }
