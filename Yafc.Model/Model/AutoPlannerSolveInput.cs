@@ -1,4 +1,4 @@
-namespace Yafc.Model;
+﻿namespace Yafc.Model;
 
 public enum AutoPlannerSolveStatus {
     Success,

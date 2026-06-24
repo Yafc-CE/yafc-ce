@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Yafc.I18n;
 using Xunit;
+using Yafc.I18n;
 
 namespace Yafc.Model.Tests;
 
