@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Yafc.Model;
 
 namespace Yafc;
@@ -8,8 +7,7 @@ namespace Yafc;
 /// Orchestrates AutoPlanner solves for the UI application.
 /// </summary>
 /// <remarks>
-/// This implementation composes the shared AutoPlanner solve pipeline with UI scheduling delegates: foreground
-/// dispatch for capture and commit, and <see cref="Task.Run"/> for compute.
+/// Capture and commit run on the foreground model context, while compute runs on a background thread.
 /// </remarks>
 public sealed class UiAutoPlannerSolveOrchestrator : IAutoPlannerSolveOrchestrator {
     /// <summary>
@@ -20,18 +18,16 @@ public sealed class UiAutoPlannerSolveOrchestrator : IAutoPlannerSolveOrchestrat
     private UiAutoPlannerSolveOrchestrator() { }
 
     /// <inheritdoc/>
-    public Task<string?> SolveAsync(ProjectPage page, AutoPlanner planner) {
+    public async Task<string?> SolveAsync(ProjectPage page, AutoPlanner planner) {
         var threadSwitcher = page.owner.modelThreadSwitcher;
-        var pipeline = new AutoPlannerSolvePipeline(
-            capture => RunOnForegroundAsync(threadSwitcher, capture),
-            static compute => new ValueTask<AutoPlannerSolveResult>(Task.Run(compute)),
-            commit => RunOnForegroundAsync(threadSwitcher, commit));
 
-        return pipeline.SolveAsync(planner);
-    }
-
-    private static async ValueTask<T> RunOnForegroundAsync<T>(IModelThreadSwitcher threadSwitcher, Func<T> action) {
+        // Capture and commit touch model state; compute only uses captured snapshots.
         await threadSwitcher.SwitchToForeground();
-        return action();
+        var input = planner.CaptureSolveInput();
+
+        var result = await Task.Run(() => AutoPlanner.ComputeSolveResult(input)).ConfigureAwait(false);
+
+        await threadSwitcher.SwitchToForeground();
+        return planner.CommitSolveResult(result);
     }
 }

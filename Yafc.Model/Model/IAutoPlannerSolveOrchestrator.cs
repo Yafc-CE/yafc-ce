@@ -3,11 +3,11 @@
 namespace Yafc.Model;
 
 /// <summary>
-/// Coordinates the AutoPlanner capture, compute, and commit pipeline.
+/// Coordinates AutoPlanner solve scheduling.
 /// </summary>
 /// <remarks>
-/// Implementations compose <see cref="AutoPlannerSolvePipeline"/> to keep solve phases consistent while varying only
-/// scheduling decisions such as foreground dispatch or background computation.
+/// Implementations explicitly choose where capture, compute, and commit execute, such as foreground dispatch or
+/// background computation.
 /// </remarks>
 public interface IAutoPlannerSolveOrchestrator {
     /// <summary>
