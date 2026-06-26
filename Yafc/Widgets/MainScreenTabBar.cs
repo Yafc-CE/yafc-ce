@@ -102,7 +102,7 @@ public class MainScreenTabBar {
         if (changePage > 0) {
             if (changePage == 1) {
                 if (changePageTo == screen.activePage) {
-                    ProjectPageSettingsPanel.Show(changePageTo);
+                    ProjectPageSettingsPanel.ShowEdit(changePageTo!);
                 }
                 else {
                     screen.SetActivePage(changePageTo);
@@ -119,7 +119,7 @@ public class MainScreenTabBar {
         bool isActive = screen.activePage == page;
         if (gui.BuildContextMenuButton(LSs.EditPageProperties, icon: Icon.Edit)) {
             _ = gui.CloseDropdown();
-            ProjectPageSettingsPanel.Show(page);
+            ProjectPageSettingsPanel.ShowEdit(page);
         }
         if (!isSecondary && !isActive) {
             if (gui.BuildContextMenuButton(LSs.OpenSecondaryPage, LSs.ShortcutCtrlClick, Icon.Secondary)) {

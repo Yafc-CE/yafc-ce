@@ -510,6 +510,38 @@ public static class ImmediateWidgets {
             return false;
         }
     }
+
+    /// <summary>
+    /// Draws a button that shows the current crafting location.
+    /// </summary>
+    /// <param name="effective">The current effective surface to display.</param>
+    /// <param name="buttonHeader"><see cref="LSs.ProductionPageCraftHeader"/> or <see cref="LSs.ProductionTableCraftHeader"/>, as appropriate to the
+    /// data being displayed.</param>
+    public static bool BuildSurfaceButton(this ImGui gui, SelectedSurface effective, LocalizableString0 buttonHeader) {
+        if (Database.locations.count == 1) {
+            return false; // Nothing to do; only one surface is available.
+        }
+
+        using (gui.EnterGroup(new(.5f))) {
+            gui.spacing = 0;
+            gui.BuildText(buttonHeader, TextBlockDisplayStyle.Centered);
+            if (effective.planet is null) {
+                gui.BuildText(LSs.ProductionTableCraftAnywhere, TextBlockDisplayStyle.Centered);
+            }
+            else {
+                string text;
+                if (effective.platform is null) {
+                    text = LSs.ProductionTableCraftOnSurface.L(effective.planet.locName);
+                }
+                else {
+                    text = LSs.ProductionTableCraftInOrbit.L(effective.platform.locName, effective.planet.locName);
+                }
+                gui.BuildText(text, TextBlockDisplayStyle.Centered, maxWidth: gui.width - 1);
+            }
+        }
+
+        return gui.BuildButton(gui.lastRect, SchemeColor.Primary, SchemeColor.Grey);
+    }
 }
 
 /// <summary>

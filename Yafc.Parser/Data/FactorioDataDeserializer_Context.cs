@@ -111,6 +111,11 @@ internal partial class FactorioDataDeserializer {
         Item totalItemOutput = createSpecialItem("item-total-output", LSs.SpecialItemTotalProduction, LSs.SpecialItemTotalProductionDescription, "__base__/graphics/icons/signal/signal_O.png");
         formerAliases["Special.total-item-input"] = totalItemInput;
         formerAliases["Special.total-item-output"] = totalItemOutput;
+
+        var surface = createSpecialObject(false, SpecialNames.PlanetSurface, "", "", "__core__/graphics/icons/technology/constants/constant-planet.png", "signal-P");
+        // Extract the interesting portion of constant-planet.png into the object icon
+        surface.iconSpec = [new("blank.png") { size = 64 }, surface.iconSpec![0] with { size = 128, x = 16, y = 8 }];
+        surface.showInExplorers = false;
     }
 
     /// <summary>

@@ -10,24 +10,32 @@ using SDL2;
 using Yafc.I18n;
 using Yafc.Model;
 using Yafc.UI;
+using Yafc.Windows;
 
 namespace Yafc;
 
 public class ProjectPageSettingsPanel : PseudoScreen {
     private static readonly JsonSerializerOptions jsonSerializerOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly ProjectPage? editingPage;
+    private readonly ProductionTable? editingTable;
     private string name;
+    private SelectedSurface selectedSurface;
+    private readonly bool includeSurface;
     private FactorioObject? icon;
-    private readonly Action<string, FactorioObject?>? callback;
+    private readonly Action<string, FactorioObject?, SelectedSurface>? callback;
 
-    private ProjectPageSettingsPanel(ProjectPage? editingPage, Action<string, FactorioObject?>? callback) {
+    private ProjectPageSettingsPanel(ProjectPage? editingPage, bool includeSurface, Action<string, FactorioObject?, SelectedSurface>? callback) {
         this.editingPage = editingPage;
         name = editingPage?.name ?? "";
         icon = editingPage?.icon;
+        editingTable = editingPage?.content as ProductionTable;
+        this.includeSurface = includeSurface;
+        selectedSurface = editingTable?.selectedSurface ?? new();
+
         this.callback = callback;
     }
 
-    private void Build(ImGui gui, Action<FactorioObject?> setIcon) {
+    private void Build(ImGui gui, Action<FactorioObject?> setIcon, Action<SelectedSurface> setSurface) {
         _ = gui.BuildTextInput(name, out name, LSs.PageSettingsNameHint, setKeyboardFocus: editingPage == null ? SetKeyboardFocus.OnFirstPanelDraw : SetKeyboardFocus.No);
         if (gui.BuildFactorioObjectButton(icon, new ButtonDisplayStyle(4f, MilestoneDisplay.None, SchemeColor.Grey) with { UseScaleSetting = false }) == Click.Left) {
             SelectSingleObjectPanel.Select(Database.objects.all, new(LSs.SelectIcon), setIcon);
@@ -36,18 +44,25 @@ public class ProjectPageSettingsPanel : PseudoScreen {
         if (icon == null && gui.isBuilding) {
             gui.DrawText(gui.lastRect, LSs.PageSettingsIconHint, RectAlignment.Middle);
         }
+
+        if (includeSurface && gui.BuildSurfaceButton(selectedSurface, LSs.ProductionPageCraftHeader)) {
+            SelectSurfaceScreen.Show(selectedSurface, LSs.ClearRootSurfaceSelection, setSurface);
+        }
     }
 
-    public static void Show(ProjectPage? page, Action<string, FactorioObject?>? callback = null)
-        => MainScreen.Instance.ShowPseudoScreen(new ProjectPageSettingsPanel(page, callback));
+    public static void ShowEdit(ProjectPage page)
+        => MainScreen.Instance.ShowPseudoScreen(new ProjectPageSettingsPanel(page, page.content is ProductionTable, null));
+
+    public static void ShowCreate(bool includeSurface, Action<string, FactorioObject?, SelectedSurface>? callback = null)
+        => MainScreen.Instance.ShowPseudoScreen(new ProjectPageSettingsPanel(null, includeSurface, callback));
 
     public override void Build(ImGui gui) {
-        gui.spacing = 3f;
+        gui.spacing = 2f;
         BuildHeader(gui, editingPage == null ? LSs.PageSettingsCreateHeader : LSs.PageSettingsEditHeader);
         Build(gui, s => {
             icon = s;
             Rebuild();
-        });
+        }, result => selectedSurface = result);
 
         using (gui.EnterRow(0.5f, RectAllocator.RightRow)) {
             if (editingPage == null && gui.BuildButton(LSs.Create, active: !string.IsNullOrEmpty(name))) {
@@ -86,12 +101,19 @@ public class ProjectPageSettingsPanel : PseudoScreen {
             return;
         }
         if (editingPage is null) {
-            callback?.Invoke(name, icon);
+            callback?.Invoke(name, icon, selectedSurface);
         }
-        else if (editingPage.name != name || editingPage.icon != icon) {
-            editingPage.RecordUndo(true).name = name!; // null-forgiving: The button is disabled if name is null or empty.
-            editingPage.icon = icon;
+        else {
+            if (editingPage.name != name || editingPage.icon != icon) {
+                editingPage.RecordUndo(true).name = name!; // null-forgiving: The button is disabled if name is null or empty.
+                editingPage.icon = icon;
+            }
+
+            if (editingTable != null && selectedSurface != editingTable.selectedSurface) {
+                editingTable.RecordUndo().selectedSurface = selectedSurface;
+            }
         }
+
         Close();
     }
 

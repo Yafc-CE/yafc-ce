@@ -103,7 +103,7 @@ public abstract class FactorioObject : IFactorioObjectWrapper, IComparable<Facto
     public static bool operator !=(IObjectWithQuality<FactorioObject>? left, FactorioObject? right) => right != left;
 }
 
-public class FactorioIconPart(string path) {
+public sealed record FactorioIconPart(string path) {
     public string path = path;
     public int size = 32;
     public float x, y, r = 1, g = 1, b = 1, a = 1;

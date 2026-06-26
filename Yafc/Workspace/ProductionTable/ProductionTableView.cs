@@ -8,6 +8,7 @@ using Yafc.Core;
 using Yafc.I18n;
 using Yafc.Model;
 using Yafc.UI;
+using Yafc.Windows;
 
 namespace Yafc;
 
@@ -135,6 +136,13 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                     gui.ShowDropDown(delegate (ImGui imgui) {
                         DrawRecipeTagSelect(imgui, recipe);
 
+                        if (recipe.subgroup != null && imgui.BuildSurfaceButton(recipe.subgroup.effectiveSurface, LSs.ProductionTableCraftHeader)
+                            && imgui.CloseDropdown()) {
+
+                            SelectSurfaceScreen.Show(recipe.subgroup.effectiveSurface, LSs.ClearChildSurfaceSelection,
+                                result => recipe.subgroup.RecordUndo().selectedSurface = result);
+                        }
+
                         if (recipe.recipe == null && imgui.BuildButton(LSs.EditPageProperties) && imgui.CloseDropdown()) {
                             HeaderRowSettingsPanel.Show(recipe);
                         }
@@ -180,7 +188,7 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                             view._focusManager.CancelFocus(recipe);
                             _ = recipe.owner.RecordUndo().recipes.Remove(recipe);
                         }
-                    });
+                    }, 25);
                     break;
                 case Click.Right when recipe.subgroup?.expanded ?? false: // With expanded subgroup
                     unpackNestedTable();
@@ -228,8 +236,9 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
         }
 
         public override void BuildMenu(ImGui gui) {
-            BuildRecipeButtons(gui, view.model);
+            var model = view.model;
 
+            BuildRecipeButtons(gui, model);
             gui.BuildText(LSs.ProductionTableExportToBlueprint, TextBlockDisplayStyle.WrappedText);
             using (gui.EnterRow()) {
                 gui.BuildText(LSs.ExportBlueprintAmountPer);
@@ -248,12 +257,12 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
             }
 
             if (gui.BuildButton(LSs.ProductionTableRemoveZeroBuildingRecipes) && gui.CloseDropdown()) {
-                RemoveZeroRecipes(view.model);
+                RemoveZeroRecipes(model);
             }
 
             if (gui.BuildRedButton(LSs.ProductionTableClearRecipes) && gui.CloseDropdown()) {
                 view._focusManager.Clear();
-                view.model.RecordUndo().recipes.Clear();
+                model.RecordUndo().recipes.Clear();
             }
 
             if (InputSystem.Instance.control && gui.BuildButton(LSs.ProductionTableAddAllRecipes) && gui.CloseDropdown()) {
@@ -272,10 +281,10 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
 
                     foreach (var quality in Database.qualities.all) {
                         foreach (var product in recipe.products) {
-                            view.RebuildIf(view.model.CreateLink(product.goods.With(quality)));
+                            view.RebuildIf(model.CreateLink(product.goods.With(quality)));
                         }
 
-                        view.model.AddRecipe(recipe.With(quality), DefaultVariantOrdering);
+                        model.AddRecipe(recipe.With(quality), DefaultVariantOrdering);
                     }
 goodsHaveNoProduction:;
                 }
@@ -887,7 +896,10 @@ goodsHaveNoProduction:;
 
     public override float CalculateWidth() => flatHierarchyBuilder.width;
 
-    public static void CreateProductionSheet() => ProjectPageSettingsPanel.Show(null, (name, icon) => MainScreen.Instance.AddProjectPage(name, icon, typeof(ProductionTable), true, true));
+    public static void CreateProductionSheet() => ProjectPageSettingsPanel.ShowCreate(true, (name, icon, surface) => {
+        var page = MainScreen.Instance.AddProjectPage(name, icon, typeof(ProductionTable), true, true);
+        ((ProductionTable)(page.content)).selectedSurface = surface;
+    });
 
     private static readonly IComparer<Goods> DefaultVariantOrdering =
         new DataUtils.FactorioObjectComparer<Goods>((x, y) => (y.ApproximateFlow() / MathF.Abs(y.Cost())).CompareTo(x.ApproximateFlow() / MathF.Abs(x.Cost())));

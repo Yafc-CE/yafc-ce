@@ -132,7 +132,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         var evt = gui.BuildButton(gui.lastRect, SchemeColor.PureBackground, SchemeColor.Grey, button: 0);
         if (evt) {
             if (gui.actionParameter == SDL.SDL_BUTTON_MIDDLE) {
-                ProjectPageSettingsPanel.Show(element);
+                ProjectPageSettingsPanel.ShowEdit(element);
                 dropDown?.Close();
             }
             else {
@@ -410,7 +410,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         }
 
         if (gui.BuildContextMenuButton(LSs.MenuLegacySummary) && gui.CloseDropdown()) {
-            ProjectPageSettingsPanel.Show(null, (name, icon) => Instance.AddProjectPage(name, icon, typeof(ProductionSummary), true, true));
+            ProjectPageSettingsPanel.ShowCreate(false, (name, icon, _) => Instance.AddProjectPage(name, icon, typeof(ProductionSummary), true, true));
         }
 
         if (gui.BuildContextMenuButton(LSs.Neie, LSs.ShortcutCtrlX.L(ImGuiUtils.ScanToString(SDL.SDL_Scancode.SDL_SCANCODE_N))) && gui.CloseDropdown()) {

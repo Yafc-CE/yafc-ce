@@ -41,6 +41,7 @@ public class SerializationTreeChangeDetection {
             [nameof(ProductionTable.links)] = typeof(List<ProductionLink>),
             [nameof(ProductionTable.recipes)] = typeof(List<RecipeRow>),
             [nameof(ProductionTable.modules)] = typeof(ModuleFillerParameters),
+            [nameof(ProductionTable.selectedSurface)] = typeof(SelectedSurface),
         },
         [typeof(RecipeRowCustomModule)] = new() {
             [nameof(RecipeRowCustomModule.module)] = typeof(IObjectWithQuality<Module>),
@@ -131,6 +132,10 @@ public class SerializationTreeChangeDetection {
             [nameof(BeaconOverrideConfiguration.beacon)] = typeof(IObjectWithQuality<EntityBeacon>),
             [nameof(BeaconOverrideConfiguration.beaconCount)] = typeof(int),
             [nameof(BeaconOverrideConfiguration.beaconModule)] = typeof(IObjectWithQuality<Module>),
+        },
+        [typeof(SelectedSurface)] = new() {
+            [nameof(SelectedSurface.planet)] = typeof(Location),
+            [nameof(SelectedSurface.platform)] = typeof(Surface),
         },
     };
 

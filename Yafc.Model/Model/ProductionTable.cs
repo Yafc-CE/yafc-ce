@@ -45,6 +45,15 @@ public sealed partial class ProductionTable : ProjectPageContents, IComparer<Pro
     public ModuleFillerParameters? modules { get; } // If you add a setter for this, ensure it calls RecipeRow.ModuleFillerParametersChanging().
     public bool containsDesiredProducts { get; private set; }
 
+    /// <summary>
+    /// Gets or sets the surface explicitly selected by this table, if any.
+    /// </summary>
+    public SelectedSurface selectedSurface { get; set; } = new();
+    /// <summary>
+    /// Gets the effective surface for this table, considering the ancestors' <see cref="selectedSurface"/>s if the current table doesn't have one.
+    /// </summary>
+    public SelectedSurface effectiveSurface => selectedSurface.planet == null && owner is RecipeRow row ? row.owner.effectiveSurface : selectedSurface;
+
     // For deserialization
     private ProductionTable(ModelObject owner) : base(owner) {
         if (owner is RecipeRow row) {
