@@ -17,16 +17,25 @@ public class MessageBox : PseudoScreenWithResult<bool> {
         this.no = no;
     }
 
-    public static void Show(Action<bool, bool>? result, string title, string message, string yes, string? no) {
+    public static void Show(Action<bool>? result, string title, string message, string yes, string? no) {
         MessageBox instance = new MessageBox(title, message, yes, no) { completionCallback = result };
         MainScreen.Instance.ShowPseudoScreen(instance);
     }
 
     public static void Show(string title, string message, string yes) => Show(null, title, message, yes, null);
 
-    public static Task<(bool haveChoice, bool choice)> Show(string title, string message, string yes, string? no) {
-        TaskCompletionSource<(bool, bool)> tcs = new TaskCompletionSource<(bool, bool)>();
-        Show((a, b) => tcs.TrySetResult((a, b)), title, message, yes, no);
+    /// <summary>
+    /// Display a dialog with yes/no/cancel behavior. <see langword="await">ing the <see cref="Task"> yields <see langword="true"/> if the user
+    /// selected the '<paramref name="yes"/>' option, <see langword="false"/> if the user selected the '<paramref name="no"/>' option, or
+    /// <see langword="null"/> if the user pressed Escape or otherwise cancelled the dialog.
+    /// </summary>
+    public static Task<bool?> Show(string title, string message, string yes, string? no) {
+        TaskCompletionSource<bool?> tcs = new();
+        MessageBox instance = new MessageBox(title, message, yes, no) {
+            completionCallback = a => tcs.TrySetResult(a),
+            cleanupCallback = () => tcs.TrySetResult(null)
+        };
+        MainScreen.Instance.ShowPseudoScreen(instance);
         return tcs.Task;
     }
 

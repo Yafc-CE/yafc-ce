@@ -8,37 +8,30 @@ using Yafc.UI;
 
 namespace Yafc;
 
-public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBuilder> {
+public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBuilder?> {
     private static readonly ModuleCustomizationScreen Instance = new ModuleCustomizationScreen();
 
     private RecipeRow? recipe;
     private ProjectModuleTemplate? template;
-    private ModuleTemplateBuilder? modules;
+    private ModuleTemplateBuilder? builder;
     private bool closeRequestedByEnter;
 
     public static void Show(RecipeRow recipe) {
         Instance.template = null;
         Instance.recipe = recipe;
-        Instance.modules = recipe.modules?.GetBuilder();
+        Instance.builder = recipe.modules?.GetBuilder();
         Instance.closeRequestedByEnter = false;
-        Instance.completionCallback = (hasResult, builder) => {
-            if (hasResult) {
-                recipe.RecordUndo().modules = builder?.Build(recipe);
-            }
-        };
+        Instance.completionCallback = builder => recipe.RecordUndo().modules = builder?.Build(recipe);
         MainScreen.Instance.ShowPseudoScreen(Instance);
     }
 
     public static void Show(ProjectModuleTemplate template) {
         Instance.recipe = null;
         Instance.template = template;
-        Instance.modules = template.template.GetBuilder();
+        Instance.builder = template.template.GetBuilder();
         Instance.closeRequestedByEnter = false;
-        Instance.completionCallback = (hasResult, builder) => {
-            if (hasResult) {
-                template.RecordUndo().template = builder!.Build(template);
-            }
-        };
+        // null-forgiving: builder cannot become null, and CloseWithResult(null) is not called with a null recipe.
+        Instance.completionCallback = builder => template.RecordUndo().template = builder!.Build(template);
         MainScreen.Instance.ShowPseudoScreen(Instance);
     }
 
@@ -115,9 +108,9 @@ public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBu
             }
         }
 
-        if (modules == null) {
+        if (builder == null) {
             if (gui.BuildButton(LSs.ModuleCustomizationEnable)) {
-                modules = new ModuleTemplateBuilder();
+                builder = new ModuleTemplateBuilder();
             }
         }
         else {
@@ -133,7 +126,7 @@ public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBu
 
             gui.BuildText(LSs.ModuleCustomizationBeaconModules, Font.subheader);
 
-            if (modules.beacon == null) {
+            if (builder.beacon == null) {
                 gui.BuildText(LSs.ModuleCustomizationUsingDefaultBeacons);
                 if (gui.BuildButton(LSs.ModuleCustomizationOverrideBeacons)) {
                     SelectBeacon(gui);
@@ -146,13 +139,13 @@ public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBu
                 }
             }
             else {
-                if (gui.BuildFactorioObjectButtonWithText(modules.beacon) == Click.Left) {
+                if (gui.BuildFactorioObjectButtonWithText(builder.beacon) == Click.Left) {
                     SelectBeacon(gui);
                 }
 
-                string modulesNotBeacons = LSs.ModuleCustomizationUseNumberOfModulesInBeacons.L(modules.beacon.target.moduleSlots);
+                string modulesNotBeacons = LSs.ModuleCustomizationUseNumberOfModulesInBeacons.L(builder.beacon.target.moduleSlots);
                 gui.BuildText(modulesNotBeacons, TextBlockDisplayStyle.WrappedText);
-                DrawRecipeModules(gui, modules.beacon, ref effects);
+                DrawRecipeModules(gui, builder.beacon, ref effects);
             }
 
             if (recipe?.entity?.target.effectReceiver.baseEffect is { } baseEffect) {
@@ -202,7 +195,7 @@ public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBu
 
         if (closeRequestedByEnter) {
             closeRequestedByEnter = false;
-            CloseWithResult(modules);
+            CloseWithResult(builder);
             return;
         }
 
@@ -218,12 +211,12 @@ public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBu
             }
             if (gui.BuildButton(LSs.Done)) {
                 closeRequestedByEnter = false;
-                CloseWithResult(modules);
+                CloseWithResult(builder);
                 return;
             }
 
             gui.allocator = RectAllocator.LeftRow;
-            if (modules != null && recipe != null && gui.BuildRedButton(LSs.ModuleCustomizationRemove)) {
+            if (builder != null && recipe != null && gui.BuildRedButton(LSs.ModuleCustomizationRemove)) {
                 closeRequestedByEnter = false;
                 CloseWithResult(null);
                 return;
@@ -232,22 +225,22 @@ public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBu
     }
 
     private void SelectBeacon(ImGui gui) {
-        if (modules!.beacon is null) { // null-forgiving: Both calls are from places where we know modules is not null
+        if (builder!.beacon is null) { // null-forgiving: Both calls are from places where we know modules is not null
             gui.BuildObjectQualitySelectDropDown(Database.allBeacons, sel => {
-                modules.beacon = sel;
+                builder.beacon = sel;
                 contents.Rebuild();
             }, new(LSs.SelectBeacon, Quality.Normal));
         }
         else {
-            QualitySelectOptions<EntityBeacon> options = new(LSs.SelectBeacon, modules.beacon.quality);
+            QualitySelectOptions<EntityBeacon> options = new(LSs.SelectBeacon, builder.beacon.quality);
             options.SelectedQualitiesChanged += gui => {
                 gui.CloseDropdown();
-                modules.beacon = modules.beacon.With(options.SelectedQuality!);
+                builder.beacon = builder.beacon.With(options.SelectedQuality!);
                 contents.Rebuild();
             };
 
             gui.BuildObjectQualitySelectDropDownWithNone(Database.allBeacons, sel => {
-                modules.beacon = sel;
+                builder.beacon = sel;
                 contents.Rebuild();
             }, options);
         }
@@ -268,7 +261,7 @@ public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBu
     private void DrawRecipeModules(ImGui gui, IObjectWithQuality<EntityBeacon>? beacon, ref ModuleEffects effects) {
         int remainingModules = recipe?.entity?.target.moduleSlots ?? 0;
         using var grid = gui.EnterInlineGrid(3f, 1f);
-        var list = beacon != null ? modules!.beaconList : modules!.list;// null-forgiving: Both calls are from places where we know modules is not null
+        var list = beacon != null ? builder!.beaconList : builder!.list;// null-forgiving: Both calls are from places where we know modules is not null
         for (int i = 0; i < list.Count; i++) {
             grid.Next();
             (IObjectWithQuality<Module> module, int fixedCount) = list[i];
@@ -308,7 +301,7 @@ public class ModuleCustomizationScreen : PseudoScreenWithResult<ModuleTemplateBu
                 }
             }
             else {
-                int beaconCount = IntegerMath.CeilingDivide(modules.beaconList.Sum(x => x.fixedCount), beacon.target.moduleSlots);
+                int beaconCount = IntegerMath.CeilingDivide(builder.beaconList.Sum(x => x.fixedCount), beacon.target.moduleSlots);
                 effects.AddModules(module, fixedCount * beacon.GetBeaconEfficiency() * beacon.target.GetProfile(beaconCount));
             }
         }

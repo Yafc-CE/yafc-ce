@@ -956,7 +956,9 @@ goodsHaveNoProduction:;
             IObjectWithQuality<RecipeOrTechnology> qualityRecipe = rec.With(goods.quality);
             RebuildIf(context.CreateLink(goods));
 
-            if (!context.Contains(qualityRecipe) || (await MessageBox.Show(LSs.ProductionTableAlertRecipeExists, LSs.ProductionTableQueryAddCopy.L(rec.locName), LSs.ProductionTableAddCopy, LSs.Cancel)).choice) {
+            if (!context.Contains(qualityRecipe) || (await MessageBox.Show(LSs.ProductionTableAlertRecipeExists,
+                LSs.ProductionTableQueryAddCopy.L(rec.locName), LSs.ProductionTableAddCopy, LSs.Cancel)).GetValueOrDefault()) {
+
                 context.AddRecipe(qualityRecipe, DefaultVariantOrdering, selectedFuel, spentFuel);
             }
         }

@@ -251,11 +251,7 @@ public class ProjectPageSettingsPanel : PseudoScreen {
         if (page != null) {
             var existing = project.FindPage(page.guid);
             if (existing != null) {
-                MessageBox.Show((haveChoice, choice) => {
-                    if (!haveChoice) {
-                        return;
-                    }
-
+                MessageBox.Show(choice => {
                     if (choice) {
                         project.RemovePage(existing);
                     }

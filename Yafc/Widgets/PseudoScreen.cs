@@ -109,19 +109,15 @@ public abstract class PseudoScreen : IKeyboardFocus {
 /// <typeparam name="T">The type of result the panel can generate.</typeparam>
 public abstract class PseudoScreenWithResult<T>(float width = 40f) : PseudoScreen(width) {
     /// <summary>
-    /// If not <see langword="null"/>, called after the panel is closed. The parameters are <c>hasResult</c> and <c>result</c>: If a result is available, the first parameter will
-    /// be <see langword="true"/>, and the second parameter will have the result. The result may be <see langword="null"/>, depending on the kind of panel that was displayed.
+    /// If not <see langword="null"/>, called with the selected value after the panel is confirmed. Not called if the panel is cancelled.
+    /// If you need to react to cancel, use <see cref="PseudoScreen.cleanupCallback"/>, which is called unconditionally after this returns
+    /// (if applicable).
     /// </summary>
-    /// <remarks>Note that the <see cref="PseudoScreen.cleanupCallback"/> will be called after invoking this callback.</remarks>
-    protected Action<bool, T?>? completionCallback;
+    protected Action<T>? completionCallback;
 
-    protected void CloseWithResult(T? result) {
-        completionCallback?.Invoke(true, result);
-        base.Close();
-    }
-
-    protected override void Close() {
-        completionCallback?.Invoke(false, default);
+    protected void CloseWithResult(T result) {
+        completionCallback?.Invoke(result);
         base.Close();
     }
 }
+
