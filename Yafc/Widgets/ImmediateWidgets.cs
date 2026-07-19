@@ -518,8 +518,8 @@ public static class ImmediateWidgets {
     /// <param name="buttonHeader"><see cref="LSs.ProductionPageCraftHeader"/> or <see cref="LSs.ProductionTableCraftHeader"/>, as appropriate to the
     /// data being displayed.</param>
     public static bool BuildSurfaceButton(this ImGui gui, SelectedSurface effective, LocalizableString0 buttonHeader) {
-        if (Database.locations.count == 1) {
-            return false; // Nothing to do; only one surface is available.
+        if (Database.locations.count < 3) {
+            return false; // Nothing to do; the only locations are nauvis and (for 2.0 and later) space-location-unknown.
         }
 
         using (gui.EnterGroup(new(.5f))) {
