@@ -176,6 +176,28 @@ public static class ImGuiUtils {
         return evt;
     }
 
+    public static ButtonEvent BuildRedButton(this ImGui gui, Icon icon, float size = 1.5f, bool invertedColors = false) {
+        Rect iconRect;
+
+        using (gui.EnterGroup(new Padding(0.3f))) {
+            iconRect = gui.AllocateRect(size, size, RectAlignment.Middle);
+        }
+
+        var evt = gui.BuildButton(gui.lastRect, SchemeColor.None, SchemeColor.Error);
+
+        if (gui.isBuilding) {
+            SchemeColor color = invertedColors ? SchemeColor.ErrorText : SchemeColor.Error;
+
+            if (gui.IsMouseOver(gui.lastRect)) {
+                color = invertedColors ? SchemeColor.Error : SchemeColor.ErrorText;
+            }
+
+            gui.DrawIcon(iconRect, icon, color);
+        }
+
+        return evt;
+    }
+
     /// <summary>
     /// Draw a button that displays an icon and inverts its colors when hovered.
     /// </summary>

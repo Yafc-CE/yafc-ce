@@ -90,7 +90,7 @@ public abstract class SelectObjectPanel<TResult, TDisplay> : PseudoScreenWithRes
 
     private void ElementDrawer(ImGui gui, TDisplay? element, int index) {
         if (element == null) {
-            ButtonEvent evt = gui.BuildIconButton(Icon.Close, SchemeColor.Error, SchemeColor.ErrorText);
+            ButtonEvent evt = gui.BuildRedButton(Icon.Close);
             if (noneTooltip != null) {
                 _ = evt.WithTooltip(gui, noneTooltip);
             }
