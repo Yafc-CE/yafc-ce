@@ -1,4 +1,4 @@
--- This file is run after all mods are loaded, to translate some data from 1.1 to 2.0 formats.
+-- This file is run after all mods are loaded, to translate some data from 1.1 (or earlier) to 2.0 formats.
 -- Other data (e.g. recipe ingredients/products) is loaded version-agnostically.
 
 -- Create spawn location data
@@ -70,3 +70,7 @@ for _, module in pairs(data.raw.module) do
 		end
 	end
 end
+
+-- Yafc needs defines.prototypes["space-location"] to deserialize planets, including the synthetic nauvis added to 1.1 data.
+-- This could be added to Defines1.1.lua, but that file is supposed to be auto-generated.
+defines.prototypes["space-location"] = { planet = 0 }
