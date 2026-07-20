@@ -26,6 +26,7 @@ public static class Database {
     public static IObjectWithQuality<Special> electricity { get; private set; } = null!;
     public static IObjectWithQuality<Recipe> electricityGeneration { get; private set; } = null!;
     public static Entity? character { get; private set; }
+    public static Special planetSurface { get; private set; } = null!;
     public static EntityCrafter[] allCrafters { get; private set; } = null!;
     public static Module[] allModules { get; private set; } = null!;
     public static EntityBeacon[] allBeacons { get; private set; } = null!;
@@ -146,6 +147,7 @@ public static class Database {
         if (objectsByTypeName.TryGetValue("Entity.character", out var ch)) {
             character = (Entity)ch;
         }
+        planetSurface = (Special)objectsByTypeName[$"Special.{SpecialNames.PlanetSurface}"];
 
         int firstSpecial = 0;
         int firstItem = skip(firstSpecial, FactorioObjectSortOrder.SpecialGoods);
@@ -359,4 +361,5 @@ public static class SpecialNames {
     public const string SpoilRecipe = "spoil";
     public const string PlantRecipe = "plant";
     public const string AsteroidCapture = "asteroid-capture";
+    public const string PlanetSurface = "planet-surface";
 }

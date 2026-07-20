@@ -677,6 +677,8 @@ internal partial class FactorioDataDeserializer {
                 }
             }
         }
+
+        ReadRequiredSurfaceProperties(table, entity);
     }
 
     private void DeserializeAsteroidChunk(LuaTable table, ErrorCollector errorCollector) {

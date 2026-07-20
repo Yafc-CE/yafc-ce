@@ -14,7 +14,7 @@ namespace Yafc;
 /// </summary>
 /// <typeparam name="TResult">The type of result the panel can generate.</typeparam>
 /// <typeparam name="TDisplay">The type of object (derived from <see cref="FactorioObject"/>) the panel will display.</typeparam>
-public abstract class SelectObjectPanel<TResult, TDisplay> : PseudoScreenWithResult<TResult> where TDisplay : FactorioObject {
+public abstract class SelectObjectPanel<TResult, TDisplay> : PseudoScreenWithResult<TResult?> where TDisplay : FactorioObject {
     private readonly SearchableList<TDisplay?> list;
     private string? header;
     private Rect searchBox;
@@ -74,22 +74,18 @@ public abstract class SelectObjectPanel<TResult, TDisplay> : PseudoScreenWithRes
         this.list.filter = default;
         this.list.data = data;
         Rebuild();
-        completionCallback = (hasResult, result) => {
-            if (hasResult) {
-                mapResult(result, obj => {
-                    if (obj is TDisplay u) {
-                        if (options.Ordering is DataUtils.FavoritesComparer<TDisplay> favoritesComparer) {
-                            favoritesComparer.AddToFavorite(u);
-                        }
+        completionCallback = result => mapResult(result, obj => {
+            if (obj is TDisplay u) {
+                if (options.Ordering is DataUtils.FavoritesComparer<TDisplay> favoritesComparer) {
+                    favoritesComparer.AddToFavorite(u);
+                }
 
-                        selectItem(u);
-                    }
-                    else if (allowNone) {
-                        selectItem(null);
-                    }
-                });
+                selectItem(u);
             }
-        };
+            else if (allowNone) {
+                selectItem(null);
+            }
+        });
     }
 
     private void ElementDrawer(ImGui gui, TDisplay? element, int index) {

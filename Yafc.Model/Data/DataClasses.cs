@@ -103,7 +103,7 @@ public abstract class FactorioObject : IFactorioObjectWrapper, IComparable<Facto
     public static bool operator !=(IObjectWithQuality<FactorioObject>? left, FactorioObject? right) => right != left;
 }
 
-public class FactorioIconPart(string path) {
+public sealed record FactorioIconPart(string path) {
     public string path = path;
     public int size = 32;
     public float x, y, r = 1, g = 1, b = 1, a = 1;
@@ -175,9 +175,6 @@ public abstract class RecipeOrTechnology : FactorioObject {
         if (sourceEntity != null) {
             collector.Add(([sourceEntity], DependencyNode.Flags.SourceEntity));
         }
-        if (sourceTiles.Count > 0) {
-            collector.Add((sourceTiles.SelectMany(t => t.locations).Distinct(), DependencyNode.Flags.Location));
-        }
 
         return collector;
     }
@@ -221,6 +218,16 @@ public class Recipe : RecipeOrTechnology {
     public bool hidden { get; internal set; }
     public float? maximumProductivity { get; internal set; }
 
+    /// <summary>
+    /// If not <see langword="null"/>, the list of surfaces where this recipe can be crafted. If <see langword="null"/>, this recipe can be crafted on
+    /// all surfaces.
+    /// </summary>
+    public IReadOnlyList<Location>? craftingSurfaces => lazyCraftingSurfaces?.Value;
+    /// <summary>
+    /// The lazy backing store for <see cref="craftingSurfaces"/>, allowing it to be calculated after its prerequsites.
+    /// </summary>
+    internal Lazy<IReadOnlyList<Location>?>? lazyCraftingSurfaces;
+
     public bool HasIngredientVariants() {
         foreach (var ingredient in ingredients) {
             if (ingredient.variants != null) {
@@ -237,6 +244,11 @@ public class Recipe : RecipeOrTechnology {
         if (!enabled) {
             nodes.Add((technologyUnlock, DependencyNode.Flags.TechnologyUnlock));
         }
+
+        if (craftingSurfaces != null) {
+            nodes.Add((craftingSurfaces, DependencyNode.Flags.Location));
+        }
+
         return nodes;
     }
 
@@ -457,6 +469,11 @@ public class Item : Goods {
     /// but it can be overridden for items that spoil into Entities.
     /// </summary>
     internal Lazy<float> getBaseSpoilTime;
+    /// <summary>
+    /// If not <see langword="null"/>, this item is a <c>space-platform-starter-pack</c> that creates the named <see cref="Location">surface</see>
+    /// when launched.
+    /// </summary>
+    internal string? launchCreatesSurface { get; set; }
 
     public override bool HasSpentFuel([NotNullWhen(true)] out Item? spent) {
         spent = fuelResult;
@@ -501,16 +518,40 @@ public class Fluid : Goods {
     }
 }
 
+/// <summary>
+/// The runtime type for space-location prototypes.
+/// </summary>
 public class Location : FactorioObject {
     public override string type => "Location";
 
     public Technology[] technologyUnlock { get; internal set; } = [];
-    internal List<string> entitySpawns { get; set; } = [];
+    internal List<string> entitySpawns { get; } = [];
     internal IReadOnlyList<string>? placementControls { get; set; }
 
     internal override FactorioObjectSortOrder sortingOrder => FactorioObjectSortOrder.Locations;
 
     public override DependencyNode GetDependencies() => (technologyUnlock, DependencyNode.Flags.TechnologyUnlock);
+}
+
+/// <summary>
+/// The runtime type for "surface" (space platform) and planet prototypes.
+/// </summary>
+public class Surface : Location {
+    /// <summary>
+    /// The names and values of this surface's properties, with defaults applied.
+    /// </summary>
+    internal Dictionary<string, float> properties { get; } = [];
+    public override DependencyNode GetDependencies() {
+        if (factorioType is "surface") {
+            // space platforms depend on the launch recipies, not a technology unlock.
+            var launches = Database.mechanics.all.Where(m => m.name.StartsWith(SpecialNames.RocketLaunch)
+                && m.ingredients is [{ goods: Item item }, _] && item.launchCreatesSurface == name);
+            return (launches, DependencyNode.Flags.Source);
+        }
+        return base.GetDependencies();
+    }
+
+    internal bool hasLightning { get; set; }
 }
 
 public class Special : Goods {
@@ -585,6 +626,11 @@ public class Entity : FactorioObject {
     public int width { get; internal set; }
     public int height { get; internal set; }
     public int size { get; internal set; }
+    /// <summary>
+    /// If not <see langword="null"/>, the list of surfaces where this entity can be built. If <see langword="null"/> and this entity can be
+    /// player-built, it can be built on all surfaces.
+    /// </summary>
+    public IReadOnlyList<Surface>? buildSurfaces { get; internal set; }
     internal override FactorioObjectSortOrder sortingOrder => FactorioObjectSortOrder.Entities;
     public override string type => "Entity";
     /// <summary>
@@ -661,12 +707,17 @@ public class Entity : FactorioObject {
             sources.Add(([], DependencyNode.Flags.ItemToPlace));
         }
 
+        List<DependencyNode> requirements = [DependencyNode.RequireAny(sources)];
+
+        if (!mapGenerated && buildSurfaces != null) {
+            requirements.Add((buildSurfaces, DependencyNode.Flags.Location));
+        }
+
         if (energy != null) {
-            return DependencyNode.RequireAll((energy.fuels, DependencyNode.Flags.Fuel), DependencyNode.RequireAny(sources));
+            requirements.Add((energy.fuels, DependencyNode.Flags.Fuel));
         }
-        else { // Doesn't require fuel
-            return DependencyNode.RequireAny(sources);
-        }
+
+        return DependencyNode.RequireAll(requirements);
     }
 
     private sealed class ListComparer : IEqualityComparer<List<EntitySpawner>> {

@@ -1,5 +1,11 @@
 data = {
   raw = {
+    planet = {
+      nauvis = {
+        name = "nauvis",
+        type = "planet",
+      },
+    },
     recipe = {
       -- Recipes so Yafc will split water into the required temperatures
       cold_water = {
@@ -121,5 +127,8 @@ defines.prototypes = {
   },
   fluid = {
     fluid = 0,
+  },
+  ["space-location"] = {
+    planet = 0
   },
 }

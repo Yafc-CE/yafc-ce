@@ -292,6 +292,12 @@ data = {
         },
       },
     },
+    planet = {
+      nauvis = {
+        name = "nauvis",
+        type = "planet",
+      },
+    },
     recipe = {
       recipe = {
         type = "recipe",
@@ -341,5 +347,8 @@ defines.prototypes = {
   item = {
     item = 0,
     module = 0,
+  },
+  ["space-location"] = {
+    planet = 0
   },
 }

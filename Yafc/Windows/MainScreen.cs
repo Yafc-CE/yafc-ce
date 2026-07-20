@@ -132,7 +132,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         var evt = gui.BuildButton(gui.lastRect, SchemeColor.PureBackground, SchemeColor.Grey, button: 0);
         if (evt) {
             if (gui.actionParameter == SDL.SDL_BUTTON_MIDDLE) {
-                ProjectPageSettingsPanel.Show(element);
+                ProjectPageSettingsPanel.ShowEdit(element);
                 dropDown?.Close();
             }
             else {
@@ -410,7 +410,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         }
 
         if (gui.BuildContextMenuButton(LSs.MenuLegacySummary) && gui.CloseDropdown()) {
-            ProjectPageSettingsPanel.Show(null, (name, icon) => Instance.AddProjectPage(name, icon, typeof(ProductionSummary), true, true));
+            ProjectPageSettingsPanel.ShowCreate(false, (name, icon, _) => Instance.AddProjectPage(name, icon, typeof(ProductionSummary), true, true));
         }
 
         if (gui.BuildContextMenuButton(LSs.Neie, LSs.ShortcutCtrlX.L(ImGuiUtils.ScanToString(SDL.SDL_Scancode.SDL_SCANCODE_N))) && gui.CloseDropdown()) {
@@ -501,13 +501,13 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         }
 
         saveConfirmationActive = true;
-        var (hasChoice, choice) = await MessageBox.Show(LSs.QuerySaveChanges, unsavedCount, LSs.Save, LSs.DontSave);
+        bool? choice = await MessageBox.Show(LSs.QuerySaveChanges, unsavedCount, LSs.Save, LSs.DontSave);
         saveConfirmationActive = false;
-        if (!hasChoice) {
+        if (choice == null) {
             return false;
         }
 
-        if (choice) {
+        if (choice.Value) {
             bool saved = await SaveProject();
             if (!saved) {
                 return false;
@@ -529,8 +529,8 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
             var release = JsonSerializer.Deserialize<GithubReleaseInfo>(result)!;
             string version = release.tag_name.StartsWith('v') ? release.tag_name[1..] : release.tag_name;
             if (new Version(version) > YafcLib.version) {
-                var (_, answer) = await MessageBox.Show(LSs.NewVersionAvailable, LSs.NewVersionNumber.L(release.tag_name), LSs.VisitReleasePage, LSs.Close);
-                if (answer) {
+                bool? answer = await MessageBox.Show(LSs.NewVersionAvailable, LSs.NewVersionNumber.L(release.tag_name), LSs.VisitReleasePage, LSs.Close);
+                if (answer.GetValueOrDefault()) {
                     Ui.VisitLink(release.html_url);
                 }
 
@@ -539,7 +539,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
             MessageBox.Show(LSs.NoNewerVersion, LSs.RunningLatestVersion, LSs.Ok);
         }
         catch (Exception) {
-            MessageBox.Show((hasAnswer, answer) => {
+            MessageBox.Show(answer => {
                 if (answer) {
                     Ui.VisitLink(AboutScreen.Github + "/releases");
                 }

@@ -228,8 +228,11 @@ internal partial class FactorioDataDeserializer {
         progress.Report((LSs.ProgressLoading, LSs.ProgressLoadingRecipes));
         DeserializePrototypes(raw, "recipe", DeserializeRecipe, progress, errorCollector);
         progress.Report((LSs.ProgressLoading, LSs.ProgressLoadingLocations));
-        DeserializePrototypes(raw, "planet", DeserializeLocation, progress, errorCollector);
+        DeserializePrototypes(raw, "surface-property", DeserializeProperty, progress, errorCollector);
+        // The default values for surface properties must be loaded before the surfaces.
+        DeserializePrototypes(raw, "planet", DeserializeSurface, progress, errorCollector);
         DeserializePrototypes(raw, "space-location", DeserializeLocation, progress, errorCollector);
+        DeserializePrototypes(raw, "surface", DeserializeSurface, progress, errorCollector);
         rootAccessible.Add(GetObject<Location>("nauvis"));
         progress.Report((LSs.ProgressLoading, LSs.ProgressLoadingQualities));
         DeserializePrototypes(raw, "quality", DeserializeQuality, progress, errorCollector);
@@ -611,6 +614,10 @@ internal partial class FactorioDataDeserializer {
             EnsureLaunchRecipe(item, launchProducts);
         }
 
+        if (item.factorioType == "space-platform-starter-pack") {
+            item.launchCreatesSurface = table.Get("surface", "space-platform");
+        }
+
         if (table.Get("weight", out int weight)) {
             item.weight = weight;
         }
@@ -881,20 +888,27 @@ nextWeightCalculation:;
         return null;
     }
 
+    private void DeserializeProperty(LuaTable table, ErrorCollector collector) {
+        if (!table.Get("name", out string? name) || string.IsNullOrEmpty(name)) {
+            collector.Error("Ignoring an unnamed surface_condition.", ErrorSeverity.MinorDataLoss);
+        }
+        else if (!table.Get("default_value", out float value)) {
+            collector.Error($"Ignoring an surface_condition {name} with no default value.", ErrorSeverity.MinorDataLoss);
+        }
+        else {
+            defaultSurfacePropertyValues[name] = value;
+        }
+    }
+
     private void DeserializeLocation(LuaTable table, ErrorCollector collector) {
-        Location location = DeserializeCommon<Location>(table, "space-location");
-        if (table.Get("map_gen_settings", out LuaTable? mapGen)) {
-            if (mapGen.Get("autoplace_controls", out LuaTable? controls)) {
-                location.placementControls = [.. controls.ObjectElements.Keys.OfType<string>()];
-            }
-            if (mapGen.Get<LuaTable>("autoplace_settings").Get<LuaTable>("entity").Get<LuaTable>("settings") is LuaTable entities) {
-                location.entitySpawns = [.. entities.ObjectElements.Keys.OfType<string>()];
-            }
-            if (mapGen.Get<LuaTable>("autoplace_settings").Get<LuaTable>("tile").Get<LuaTable>("settings") is LuaTable tiles) {
-                foreach (string tile in tiles.ObjectElements.Keys.Cast<string>()) {
-                    allObjects.OfType<Tile>().Single(t => t.name == tile).locations.Add(location);
-                }
-            }
+        Location location;
+        if (table["type"] is "surface") {
+            // space-platform's type is "surface" and its name is in surface-name.space-platform
+            location = DeserializeCommon<Location>(table, "surface");
+        }
+        else {
+            // Everything else (both planets and space-locations) are named in [space-location-name]
+            location = DeserializeCommon<Location>(table, "space-location");
         }
 
         if (table.Get("asteroid_spawn_definitions", out LuaTable? spawns)) {
@@ -903,6 +917,41 @@ nextWeightCalculation:;
                     location.entitySpawns.Add(asteroid);
                 }
             }
+        }
+    }
+
+    private void DeserializeSurface(LuaTable table, ErrorCollector collector) {
+        DeserializeLocation(table, collector);
+        Surface surface = GetObject<Surface>(table);
+        ReadLocationProperties(surface, table, collector);
+
+        if (table.Get("map_gen_settings", out LuaTable? mapGen)) {
+            if (mapGen.Get("autoplace_controls", out LuaTable? controls)) {
+                surface.placementControls = [.. controls.ObjectElements.Keys.OfType<string>()];
+            }
+            if (mapGen.Get<LuaTable>("autoplace_settings").Get<LuaTable>("entity").Get<LuaTable>("settings") is LuaTable entities) {
+                surface.entitySpawns.AddRange(entities.ObjectElements.Keys.OfType<string>());
+            }
+            if (mapGen.Get<LuaTable>("autoplace_settings").Get<LuaTable>("tile").Get<LuaTable>("settings") is LuaTable tiles) {
+                foreach (string tile in tiles.ObjectElements.Keys.Cast<string>()) {
+                    allObjects.OfType<Tile>().Single(t => t.name == tile).locations.Add(surface);
+                }
+            }
+        }
+
+        surface.hasLightning = table["lightning_properties"] is LuaTable;
+    }
+
+    private void ReadLocationProperties(Surface surface, LuaTable table, ErrorCollector collector) {
+        foreach ((string property, float value) in defaultSurfacePropertyValues) {
+            surface.properties[property] = value;
+        }
+        foreach ((object propertyName, object? value) in table.Get<LuaTable>("surface_properties")?.ObjectElements ?? []) {
+            if (propertyName is not string property || string.IsNullOrEmpty(property) || value is not double d) {
+                collector.Error($"{surface.name} sets an invalid property {propertyName}; ignored.", ErrorSeverity.MinorDataLoss);
+                continue;
+            }
+            surface.properties[property] = (float)d;
         }
     }
 
