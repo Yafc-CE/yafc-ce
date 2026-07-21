@@ -177,7 +177,7 @@ public static partial class FactorioDataSource {
         foreach (string fileName in Directory.EnumerateFiles(directory)) {
             if (fileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
                 FileStream fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-                ZipArchive zipArchive = new ZipArchive(fileStream);
+                IZipArchive zipArchive = new BackslashTolerantZipArchive(fileStream);
                 var infoEntry = zipArchive.Entries.FirstOrDefault(x =>
                     x.Name.Equals("info.json", StringComparison.OrdinalIgnoreCase) &&
                     x.FullName.IndexOf('/') == x.FullName.Length - "info.json".Length - 1);
@@ -186,6 +186,8 @@ public static partial class FactorioDataSource {
                     string folder = infoEntry.FullName[..^"info.json".Length];
 
                     // built-in mods are never zipped
+                    // unlike the directory loop above, we don't check isBuiltIn here. 
+                    // So we go through the malarkey of actually pulling .lua and .cfg files
                     foreach (var fileEntry in zipArchive.Entries.Where(e => e.FullName.EndsWith(".lua")).OrderBy(e => e.FullName)
                         .Concat(zipArchive.Entries.Where(e => e.FullName.EndsWith(".cfg")).OrderBy(e => e.FullName))) {
 
@@ -550,7 +552,7 @@ public static partial class FactorioDataSource {
         public bool expansion_shaders_required { get; set; }
         public bool expansion_required { get; set; }
 
-        public ZipArchive? zipArchive;
+        public IZipArchive? zipArchive;
         public readonly string folder;
         public readonly uint dataHash;
         /// <summary>
@@ -561,7 +563,7 @@ public static partial class FactorioDataSource {
         /// <param name="json">The bytes in this mod's info.json.</param>
         /// <param name="dataHash">A hash of the .lua and .cfg data in this mod.</param>
         /// <param name="infoHash">A hash of info.json in this built-in mod, or zero.</param>
-        public ModInfo(string folder, byte[] json, uint dataHash, uint infoHash, ZipArchive? zipArchive = null) {
+        public ModInfo(string folder, byte[] json, uint dataHash, uint infoHash, IZipArchive? zipArchive = null) {
             this.folder = folder;
             this.zipArchive = zipArchive;
             Newtonsoft.Json.JsonSerializer.Create().Populate(new StreamReader(new MemoryStream(json)), this);
