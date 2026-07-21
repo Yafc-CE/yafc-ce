@@ -27,6 +27,7 @@ Date:
         - Update the cost analysis to use the default modules of buildings that only accept their own module category (like Py farms), and the Pyanodon TURD upgrades that you select.
         - Update the cost analysis to price each recipe with its fastest building unlocked at the current milestones, using that building's speed, size, energy and pollution together. If none is unlocked, the slowest building is used. Buildings with -100% speed, like Py farms, use their slowest module if none of their modules is unlocked yet. Pumps, generators, reactors and agricultural towers use their real speed too, and an agricultural tower's size includes its field. Mining still assumes speed 1.
         - Add a search box to the Milestones panel and the Milestone editor, to quickly find milestones in long lists.
+        - Hold Ctrl in a recipe tooltip to see how its cost is broken down, and Ctrl+Shift to see that breakdown at the current milestones.
     Fixes:
         - Support prototype-stage JSON and string exports in mods. YAFC suppresses script-output file writes while continuing to load the mod.
         - Cost analysis: mining recipes in Factorio 2.0 were always penalized as if the resource was extremely rare. Mined resources are now considerably cheaper.
