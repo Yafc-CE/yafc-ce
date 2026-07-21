@@ -10,6 +10,19 @@ using Yafc.I18n;
 
 namespace Yafc.Model;
 
+/// <summary>
+/// Breakdown of logistics cost components for a recipe.
+/// </summary>
+public record RecipeLogisticsBreakdown(
+    float TimeSizeCost,
+    float PowerCost,
+    float ItemTransportCost,
+    float FluidTransportCost,
+    float PollutionCost,
+    float MiningPenalty,
+    float TotalCost
+);
+
 public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
     private readonly ILogger logger = Logging.GetLogger<CostAnalysis>();
 
@@ -41,6 +54,176 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
 
     private bool ShouldInclude(FactorioObject obj) => onlyCurrentMilestones ? obj.IsAutomatableWithCurrentMilestones() : obj.IsAutomatable();
 
+    /// <summary>
+    /// Finds the inventory slots per tile of the most space-efficient accessible container.
+    /// </summary>
+    private float GetBestContainerSlotsPerTile() {
+        float bestSlotsPerTile = 1f;
+        foreach (var container in Database.allContainers) {
+            float area = container.width * container.height;
+            if (ShouldInclude(container) && area > 0) {
+                float slotsPerTile = container.inventorySize / area;
+                if (slotsPerTile > bestSlotsPerTile) {
+                    bestSlotsPerTile = slotsPerTile;
+                }
+            }
+        }
+
+        return bestSlotsPerTile;
+    }
+
+    /// <summary>
+    /// The most favorable statistics across a recipe's crafters, and the fuel to use if they all agree on a single one.
+    /// </summary>
+    private readonly record struct CrafterStats(float MinEmissions, int MinSize, float MinPower, Goods? SingleUsedFuel, float SingleUsedFuelAmount);
+
+    private CrafterStats FindCrafterStats(Recipe recipe) {
+        // TODO incorporate fuel selection. Now just select fuel if it only uses 1 fuel
+        Goods? singleUsedFuel = null;
+        float singleUsedFuelAmount = 0f;
+        float minEmissions = 100f;
+        int minSize = 15;
+        float minPower = 1000f;
+
+        foreach (var crafter in recipe.crafters) {
+            foreach ((_, float e) in crafter.energy.emissions) {
+                minEmissions = MathF.Min(e, minEmissions);
+            }
+
+            if (crafter.energy.type == EntityEnergyType.Heat) {
+                break;
+            }
+
+            if (crafter.size < minSize) {
+                minSize = crafter.size;
+            }
+
+            float power = crafter.energy.type == EntityEnergyType.Void ? 0f : recipe.time * crafter.basePower / (crafter.baseCraftingSpeed * crafter.energy.effectivity);
+
+            if (power < minPower) {
+                minPower = power;
+            }
+
+            foreach (var fuel in crafter.energy.fuels) {
+                if (!ShouldInclude(fuel)) {
+                    continue;
+                }
+
+                if (fuel.fuelValue <= 0f) {
+                    singleUsedFuel = null;
+                    break;
+                }
+
+                float amount = power / fuel.fuelValue;
+
+                if (singleUsedFuel == null) {
+                    singleUsedFuel = fuel;
+                    singleUsedFuelAmount = amount;
+                }
+                else if (singleUsedFuel == fuel) {
+                    singleUsedFuelAmount = MathF.Min(singleUsedFuelAmount, amount);
+                }
+                else {
+                    singleUsedFuel = null;
+                    break;
+                }
+            }
+
+            if (singleUsedFuel == null) {
+                break;
+            }
+        }
+
+        return new CrafterStats(minEmissions, minSize, minPower, singleUsedFuel, singleUsedFuelAmount);
+    }
+
+    /// <summary>
+    /// Computes the logistics cost breakdown for a recipe.
+    /// </summary>
+    public RecipeLogisticsBreakdown ComputeLogisticsBreakdown(Project project, Recipe recipe)
+        => ComputeLogisticsBreakdown(project, recipe, FindCrafterStats(recipe), GetBestContainerSlotsPerTile());
+
+    private static RecipeLogisticsBreakdown ComputeLogisticsBreakdown(Project project, Recipe recipe, CrafterStats crafterStats, float bestContainerSlotsPerTile) {
+        float minEmissions = crafterStats.MinEmissions;
+        float minPower = crafterStats.MinPower;
+
+        if (minPower < 0f) {
+            minPower = 0f;
+        }
+
+        int size = Math.Max(crafterStats.MinSize, (recipe.ingredients.Length + recipe.products.Length) / 2);
+        float sizeUsage = CostPerSecond * recipe.time * size;
+        float timeSizeCost = sizeUsage * (1f + (CostPerIngredientPerSize * recipe.ingredients.Length) + (CostPerProductPerSize * recipe.products.Length));
+        float powerCost = CostPerMj * minPower;
+
+        // Special handling for spoilage recipes: cost depends on container efficiency and stack size
+        // Spoilage happens in storage containers where many stacks spoil in parallel
+        if (recipe is Mechanics && recipe.name.StartsWith("spoil.") && recipe.ingredients.Length == 1 && recipe.ingredients[0].goods is Item spoilingItem) {
+            int stackSize = spoilingItem.stackSize;
+            // Cost is based on storage space needed: time / (stackSize * slotsPerTile)
+            // This reflects that larger stacks and better containers reduce infrastructure cost
+            timeSizeCost = CostPerSecond * recipe.time / (stackSize * bestContainerSlotsPerTile);
+            powerCost = 0f;
+        }
+
+        float itemTransportCost = 0f;
+        float fluidTransportCost = 0f;
+
+        foreach (var product in recipe.products) {
+            if (product.goods is Item) {
+                itemTransportCost += product.amount * CostPerItem;
+            }
+            else if (product.goods is Fluid) {
+                fluidTransportCost += product.amount * CostPerFluid;
+            }
+        }
+
+        foreach (var ingredient in recipe.ingredients) {
+            if (ingredient.goods is Item) {
+                itemTransportCost += ingredient.amount * CostPerItem;
+            }
+            else if (ingredient.goods is Fluid) {
+                fluidTransportCost += ingredient.amount * CostPerFluid;
+            }
+        }
+
+        float miningPenalty = 1f;
+
+        if (recipe.sourceEntity != null && recipe.sourceEntity.mapGenerated) {
+            float totalMining = 0f;
+
+            foreach (var product in recipe.products) {
+                totalMining += product.amount;
+            }
+
+            miningPenalty = MiningPenalty;
+            float totalDensity = recipe.sourceEntity.mapGenDensity / totalMining;
+
+            if (totalDensity < MiningMaxDensityForPenalty) {
+                float extraPenalty = MathF.Log(MiningMaxDensityForPenalty / totalDensity);
+                miningPenalty += Math.Min(extraPenalty, MiningMaxExtraPenaltyForRarity);
+            }
+        }
+
+        float pollutionCost = 0f;
+
+        if (minEmissions >= 0f) {
+            pollutionCost = minEmissions * CostPerPollution * recipe.time * project.settings.PollutionCostModifier;
+        }
+
+        float totalCost = ((timeSizeCost + powerCost + itemTransportCost + fluidTransportCost) * miningPenalty) + pollutionCost;
+
+        return new RecipeLogisticsBreakdown(
+            TimeSizeCost: timeSizeCost,
+            PowerCost: powerCost,
+            ItemTransportCost: itemTransportCost,
+            FluidTransportCost: fluidTransportCost,
+            PollutionCost: pollutionCost,
+            MiningPenalty: miningPenalty,
+            TotalCost: totalCost
+        );
+    }
+
     public override void Compute(Project project, ErrorCollector warnings) {
         var workspaceSolver = DataUtils.CreateSolver();
         var objective = workspaceSolver.Objective();
@@ -48,16 +231,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
         Stopwatch time = Stopwatch.StartNew();
 
         // Find the best accessible container for spoilage cost calculation
-        float bestContainerSlotsPerTile = 1f;
-        foreach (var container in Database.allContainers) {
-            float area = container.width * container.height;
-            if (ShouldInclude(container) && area > 0) {
-                float slotsPerTile = container.inventorySize / area;
-                if (slotsPerTile > bestContainerSlotsPerTile) {
-                    bestContainerSlotsPerTile = slotsPerTile;
-                }
-            }
-        }
+        float bestContainerSlotsPerTile = GetBestContainerSlotsPerTile();
 
         var variables = Database.goods.CreateMapping<Variable>();
         var constraints = Database.recipes.CreateMapping<Constraint>();
@@ -130,135 +304,31 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 continue;
             }
 
-            // TODO incorporate fuel selection. Now just select fuel if it only uses 1 fuel
-            Goods? singleUsedFuel = null;
-            float singleUsedFuelAmount = 0f;
-            float minEmissions = 100f;
-            int minSize = 15;
-            float minPower = 1000f;
-
-            foreach (var crafter in recipe.crafters) {
-                foreach ((_, float e) in crafter.energy.emissions) {
-                    minEmissions = MathF.Min(e, minEmissions);
-                }
-
-                if (crafter.energy.type == EntityEnergyType.Heat) {
-                    break;
-                }
-
-                if (crafter.size < minSize) {
-                    minSize = crafter.size;
-                }
-
-                float power = crafter.energy.type == EntityEnergyType.Void ? 0f : recipe.time * crafter.basePower / (crafter.baseCraftingSpeed * crafter.energy.effectivity);
-
-                if (power < minPower) {
-                    minPower = power;
-                }
-
-                foreach (var fuel in crafter.energy.fuels) {
-                    if (!ShouldInclude(fuel)) {
-                        continue;
-                    }
-
-                    if (fuel.fuelValue <= 0f) {
-                        singleUsedFuel = null;
-                        break;
-                    }
-
-                    float amount = power / fuel.fuelValue;
-
-                    if (singleUsedFuel == null) {
-                        singleUsedFuel = fuel;
-                        singleUsedFuelAmount = amount;
-                    }
-                    else if (singleUsedFuel == fuel) {
-                        singleUsedFuelAmount = MathF.Min(singleUsedFuelAmount, amount);
-                    }
-                    else {
-                        singleUsedFuel = null;
-                        break;
-                    }
-                }
-                if (singleUsedFuel == null) {
-                    break;
-                }
-            }
-
-            if (minPower < 0f) {
-                minPower = 0f;
-            }
-
-            int size = Math.Max(minSize, (recipe.ingredients.Length + recipe.products.Length) / 2);
-            float sizeUsage = CostPerSecond * recipe.time * size;
-            float logisticsCost = (sizeUsage * (1f + (CostPerIngredientPerSize * recipe.ingredients.Length) + (CostPerProductPerSize * recipe.products.Length))) + (CostPerMj * minPower);
-
-            // Special handling for spoilage recipes: cost depends on container efficiency and stack size
-            // Spoilage happens in storage containers where many stacks spoil in parallel
-            if (recipe is Mechanics && recipe.name.StartsWith("spoil.") && recipe.ingredients.Length == 1 && recipe.ingredients[0].goods is Item spoilingItem) {
-                int stackSize = spoilingItem.stackSize;
-                // Cost is based on storage space needed: time / (stackSize * slotsPerTile)
-                // This reflects that larger stacks and better containers reduce infrastructure cost
-                logisticsCost = CostPerSecond * recipe.time / (stackSize * bestContainerSlotsPerTile);
-            }
+            var crafterStats = FindCrafterStats(recipe);
+            var singleUsedFuel = crafterStats.SingleUsedFuel;
 
             if (singleUsedFuel?.isPower == true) {
                 singleUsedFuel = null;
             }
+
+            float logisticsCost = ComputeLogisticsBreakdown(project, recipe, crafterStats, bestContainerSlotsPerTile).TotalCost;
 
             var constraint = workspaceSolver.MakeConstraint(double.NegativeInfinity, 0, recipe.name);
             constraints[recipe] = constraint;
 
             foreach (var product in recipe.products) {
                 var var = variables[product.goods];
-                float amount = product.amount;
-                constraint.SetCoefficientCheck(var, amount, ref lastVariable[product.goods]);
-
-                if (product.goods is Item) {
-                    logisticsCost += amount * CostPerItem;
-                }
-                else if (product.goods is Fluid) {
-                    logisticsCost += amount * CostPerFluid;
-                }
+                constraint.SetCoefficientCheck(var, product.amount, ref lastVariable[product.goods]);
             }
 
             if (singleUsedFuel != null) {
                 var var = variables[singleUsedFuel];
-                constraint.SetCoefficientCheck(var, -singleUsedFuelAmount, ref lastVariable[singleUsedFuel]);
+                constraint.SetCoefficientCheck(var, -crafterStats.SingleUsedFuelAmount, ref lastVariable[singleUsedFuel]);
             }
 
             foreach (var ingredient in recipe.ingredients) {
                 var var = variables[ingredient.goods]; // TODO split cost analysis
                 constraint.SetCoefficientCheck(var, -ingredient.amount, ref lastVariable[ingredient.goods]);
-
-                if (ingredient.goods is Item) {
-                    logisticsCost += ingredient.amount * CostPerItem;
-                }
-                else if (ingredient.goods is Fluid) {
-                    logisticsCost += ingredient.amount * CostPerFluid;
-                }
-            }
-
-            if (recipe.sourceEntity != null && recipe.sourceEntity.mapGenerated) {
-                float totalMining = 0f;
-
-                foreach (var product in recipe.products) {
-                    totalMining += product.amount;
-                }
-
-                float miningPenalty = MiningPenalty;
-                float totalDensity = recipe.sourceEntity.mapGenDensity / totalMining;
-
-                if (totalDensity < MiningMaxDensityForPenalty) {
-                    float extraPenalty = MathF.Log(MiningMaxDensityForPenalty / totalDensity);
-                    miningPenalty += Math.Min(extraPenalty, MiningMaxExtraPenaltyForRarity);
-                }
-
-                logisticsCost *= miningPenalty;
-            }
-
-            if (minEmissions >= 0f) {
-                logisticsCost += minEmissions * CostPerPollution * recipe.time * project.settings.PollutionCostModifier;
             }
 
             constraint.SetUb(logisticsCost);
