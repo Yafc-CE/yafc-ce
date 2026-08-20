@@ -156,6 +156,7 @@ internal partial class LuaContext : IDisposable {
 
         var helpers = NewTable();
         helpers["game_version"] = gameVersion.ToString(3);
+        helpers["stage"] = "prototype";
         SetGlobal("helpers", helpers);
         SetGlobal("yafc", NewTable());
 
