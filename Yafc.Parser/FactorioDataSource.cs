@@ -309,10 +309,9 @@ public static partial class FactorioDataSource {
 
                 ModInfo? existing = null;
                 bool modFound = mod.ValidForFactorioVersion(factorioVersion) && allMods.TryGetValue(mod.name, out existing);
-                bool higherVersionOrFolder = existing == null || mod.parsedVersion > existing.parsedVersion || (mod.parsedVersion == existing.parsedVersion && existing.zipArchive != null && mod.zipArchive == null);
-                bool existingMatchesVersionDirective = versionSpecifiers.TryGetValue(mod.name, out var version) && existing?.parsedVersion == version;
+                _ = versionSpecifiers.TryGetValue(mod.name, out var version);
 
-                if (modFound && higherVersionOrFolder && !existingMatchesVersionDirective) {
+                if (modFound && ShouldReplaceMod(existing, mod, version)) {
                     existing?.Dispose();
                     allMods[mod.name] = mod;
                 }
@@ -521,6 +520,25 @@ public static partial class FactorioDataSource {
 
     internal class ModList {
         public ModEntry[] mods { get; set; } = null!; // null-forgiving: Initialized by the Json reader.
+    }
+
+    internal static bool ShouldReplaceMod(ModInfo? existing, ModInfo candidate, Version? requestedVersion) {
+        if (existing == null) {
+            return true;
+        }
+
+        // A version from mod-list.json takes priority even if a newer archive was discovered first.
+        // When neither matches, retain the existing fallback to the newest installed version.
+        if (requestedVersion != null) {
+            bool candidateMatches = candidate.parsedVersion == requestedVersion;
+            bool existingMatches = existing.parsedVersion == requestedVersion;
+            if (candidateMatches != existingMatches) {
+                return candidateMatches;
+            }
+        }
+
+        return candidate.parsedVersion > existing.parsedVersion ||
+            (candidate.parsedVersion == existing.parsedVersion && existing.zipArchive != null && candidate.zipArchive == null);
     }
 
     internal partial class ModInfo : IDisposable {
