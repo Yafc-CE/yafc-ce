@@ -24,6 +24,7 @@ Date:
     Features:
         - Allow planet selection for production tables, and complain if the selected recipe or entity can't be used there.
     Fixes:
+        - Honor mod-list.json version selections regardless of mod discovery order, preventing incompatible mod versions from being mixed.
 ----------------------------------------------------------------------------------------------------------------------
 Version: 2.20.0
 Date: 17 July 2026
