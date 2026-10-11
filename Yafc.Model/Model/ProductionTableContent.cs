@@ -774,12 +774,12 @@ public sealed class RecipeRow : ModelObject<ProductionTable>, IGroupedElement<Pr
     /// The chosen module is based upon the unlock order and what milestones are currently unlocked. No secondary sort on prod/speed to keep the code simpler
     /// </summary>
     public void AutoApplySingleCategoryModule() {
-        //Don't change anything if existing modules are set
+        // Don't change anything if existing modules are set
         if (modules != null) {
             return;
         }
 
-        //Basic safety checks
+        // Basic safety checks
         if (recipe is null || entity is null || entity.target.moduleSlots <= 0) {
             return;
         }
@@ -795,24 +795,24 @@ public sealed class RecipeRow : ModelObject<ProductionTable>, IGroupedElement<Pr
         IObjectWithQuality<Module>? bestModule = null;
         Bits bestUnlockOrder = default;
 
-        //Loop over all modules finding the one that is usable, unlocked, and unlocks latest according to milestones
+        // Loop over all modules finding the one that is usable, unlocked, and unlocks latest according to milestones
         foreach (Module module in Database.allModules) {
-            //Check module is in the building's allowed category
+            // Check module is in the building's allowed category
             if (module.moduleSpecification.category != moduleCategory) {
                 continue;
             }
 
-            //Check the recipe allows this module
+            // Check the recipe allows this module
             if (!entity.target.CanAcceptModule(module.moduleSpecification) || !recipe.target.CanAcceptModule(module)) {
                 continue;
             }
 
-            //Check if this module is currently available with the active milestones
+            // Check if this module is currently available with the active milestones
             if (!module.IsAccessibleWithCurrentMilestones()) {
                 continue;
             }
 
-            //Update if this module is better (milestone order)
+            // Update if this module is better (milestone order)
             Bits moduleMilestoneOrder = Milestones.Instance.GetMilestoneResult(module.id);
             if (bestModule == null || moduleMilestoneOrder > bestUnlockOrder) {
                 bestModule = module.With(Quality.MaxAccessible);
@@ -820,7 +820,7 @@ public sealed class RecipeRow : ModelObject<ProductionTable>, IGroupedElement<Pr
             }
         }
 
-        //We have a working module, fill all the module slots
+        // We have a working module, fill all the module slots
         if (bestModule != null) {
             modules = new ModuleTemplateBuilder {
                 list = [(bestModule, 0)]

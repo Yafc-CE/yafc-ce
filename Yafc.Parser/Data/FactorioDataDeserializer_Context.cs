@@ -914,7 +914,7 @@ nextLocation:;
             return list;
         }
 
-        ///<summary>Just return an empty enumerable.</summary>
+        /// <summary>Just return an empty enumerable.</summary>
         private static IEnumerable<TValue> NoExtraItems(TKey item) => [];
 
         public bool Equals(List<TValue>? x, List<TValue>? y) {

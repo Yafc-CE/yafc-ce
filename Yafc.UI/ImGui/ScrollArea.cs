@@ -160,7 +160,7 @@ public abstract class Scrollable(bool vertical, bool horizontal, bool collapsibl
         set => scroll = new Vector2(value, _scroll.Y);
     }
 
-    ///<summary>This method is called when the required area of the <see cref="Scrollable"/> for the provided <paramref name="width"/> is needed.</summary>
+    /// <summary>This method is called when the required area of the <see cref="Scrollable"/> for the provided <paramref name="width"/> is needed.</summary>
     /// <returns>The required area of the contents of the <see cref="Scrollable"/>.</returns>
     public abstract Vector2 MeasureContent(float width);
 
@@ -291,11 +291,11 @@ public abstract class ScrollAreaBase : Scrollable {
 
     public void RebuildContents() => contents.Rebuild();
 
-    ///<summary>Calculates the content dimensions by (re)building the contents using <see cref="BuildContents"/></summary>
+    /// <summary>Calculates the content dimensions by (re)building the contents using <see cref="BuildContents"/></summary>
     public override Vector2 MeasureContent(float width) => contents.CalculateState(width);
 }
 
-///<summary>Area with scrollbars, which will be visible if it does not fit in the parent area in order to let the user fully view the content of the area.</summary>
+/// <summary>Area with scrollbars, which will be visible if it does not fit in the parent area in order to let the user fully view the content of the area.</summary>
 /// <param name="height">See <see cref="ScrollAreaBase"/>.</param>
 /// <param name="builder">Callback that draws the scroll area's contents into the inner <see cref="ImGui"/>.</param>
 /// <param name="padding">See <see cref="ScrollAreaBase"/>.</param>

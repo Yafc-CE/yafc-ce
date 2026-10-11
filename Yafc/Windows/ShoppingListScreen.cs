@@ -19,7 +19,7 @@ public class ShoppingListScreen : PseudoScreen {
 
     private readonly VirtualScrollList<(IObjectWithQuality<FactorioObject>, float)> list;
     private float shoppingCost, totalBuildings, totalModules, totalHeat;
-    private List<Entity> pipes = null!, belts = null!, other = null!; //null-forgiving: set by RebuildData
+    private List<Entity> pipes = null!, belts = null!, other = null!; // null-forgiving: set by RebuildData
     private bool decomposed = false;
     private static DisplayState displayState {
         get => (DisplayState)(Preferences.Instance.shoppingDisplayState >> 1);
