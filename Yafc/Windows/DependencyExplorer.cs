@@ -190,7 +190,7 @@ public class DependencyExplorer : PseudoScreen {
     }
 
     public override bool KeyDown(SDL.SDL_Keysym key) {
-        if (key.scancode == SDL.SDL_Scancode.SDL_SCANCODE_BACKSPACE && history.Count > 0) {
+        if (key.scancode is SDL.SDL_Scancode.SDL_SCANCODE_BACKSPACE or SDL.SDL_Scancode.SDL_SCANCODE_KP_BACKSPACE && history.Count > 0) {
             var last = history[^1];
             Change(last);
             history.RemoveRange(history.Count - 2, 2);
