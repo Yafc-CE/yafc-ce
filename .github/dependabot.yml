@@ -9,3 +9,18 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      # Test-only packages, they don't end up in the release
+      test-tooling:
+        patterns: ["xunit*", "Microsoft.NET.Test.Sdk"]
+      # Major updates are left out, so they still get a PR of their own
+      runtime:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
