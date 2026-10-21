@@ -63,7 +63,7 @@ jobs:
     name: macOS (universal)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install build tools
         run: brew install cmake ninja
@@ -83,7 +83,7 @@ jobs:
           echo "=== git status ==="; git status --short
           echo "=== git diff --stat ==="; git diff --stat
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos-dylibs
           path: |
@@ -95,7 +95,7 @@ jobs:
     name: Windows (MinGW cross-compile)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install build tools
         run: |
@@ -116,7 +116,7 @@ jobs:
           echo "=== git status ==="; git status --short
           echo "=== git diff --stat ==="; git diff --stat
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-dlls
           path: Yafc/lib/windows/SDL2*.dll
@@ -131,16 +131,16 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download macOS dylibs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: macos-dylibs
           path: artifacts/macos
 
       - name: Download Windows DLLs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: windows-dlls
           path: artifacts/windows
@@ -155,7 +155,7 @@ jobs:
           git status --short
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           # Target the branch the workflow was dispatched from, so the PR diff is
           # just the rebuilt libraries rather than everything since master.

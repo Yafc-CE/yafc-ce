@@ -26,6 +26,6 @@ jobs:
     name: macOS dylibs are self-contained
     runs-on: ubuntu-latest  # the checker parses Mach-O directly; no macOS needed
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify install names
         run: python3 sdl/check-macho.py Yafc/lib/osx-arm64 Yafc/lib/osx
