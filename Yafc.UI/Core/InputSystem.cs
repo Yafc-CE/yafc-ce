@@ -17,11 +17,6 @@ public interface IMouseFocus {
     void FocusChanged(bool focused);
 }
 
-// INavigationTarget exists to support Mouse 4 (AKA X1) based navigation of cases where defaultKeyboardFocus is set to an object that implements this interface.
-public interface INavigationTarget {
-    void NavigateBack();
-}
-
 public sealed class InputSystem {
     public static readonly InputSystem Instance = new InputSystem();
 
@@ -157,10 +152,8 @@ public sealed class InputSystem {
             }
         }
 
-        // Mouse button 4 (X1) is commonly used for backwards navigation.
-        // If this button is used, we do an early out to avoid treating it as a "normal" mouse click.
-        if (button == SDL.SDL_BUTTON_X1) {
-            (defaultKeyboardFocus as INavigationTarget)?.NavigateBack();
+        // Early out if Mouse keys for navigation are used.
+        if (NavigationHelper.HandleMouseButtonNavigation(button, defaultKeyboardFocus)) {
             return;
         }
 

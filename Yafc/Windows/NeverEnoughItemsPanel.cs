@@ -17,8 +17,8 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
 
     // Recent is the list of Goods shown at the top of the window, and does not contain duplicates.
     private readonly List<Goods> recent = [];
-    // History is the linear history of what Goods have been shown, except when backspace is used to navigate backwards through history.
-    private readonly List<Goods> history = [];
+    public NavigationHelper navigationHelper { get; }
+
     private bool atCurrentMilestones;
 
     private readonly ScrollArea productionList;
@@ -70,6 +70,9 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
     private RecipeEntry[] usages = [];
 
     private NeverEnoughItemsPanel() : base(76f) {
+        // Due to NavigationHelper needing to be accesible to anything using INavigationTarget without knowing what type it's specialized for, 
+        //  we need to wrap the Change call in a lambda. 
+        navigationHelper = new NavigationHelper { changeDelegate = arg => SetItem(arg) };
         productionList = new ScrollArea(40f, BuildItemProduction, new Padding(0.5f));
         usageList = new ScrollArea(40f, BuildItemUsages, new Padding(0.5f));
     }
@@ -84,9 +87,9 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
         Instance.SetItem(item);
     }
 
-    private void SetItem(Goods current) => SetItem(current, true);
-    private void SetItem(Goods current, bool recordHistory) {
+    private void SetItem(Goods current) {
         if (current == this.current) {
+            // TODO: This early out doesn't seem to work?!
             return;
         }
 
@@ -95,15 +98,12 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
             recent.RemoveAt(0);
         }
 
+        // This check exists to prevent the same item being added to the recent or history more then once due to how Show + Refresh works. 
         if (this.current != null) {
             recent.Add(this.current);
-            if (recordHistory) {
-                history.Add(this.current);
-                if (history.Count > 100) {
-                    history.RemoveRange(0, 20);
-                }
-            }
+            navigationHelper.addHistory(current);
         }
+
 
         currentFlow = current.ApproximateFlow(atCurrentMilestones);
         RecipeEntry[] refreshedProductions = new RecipeEntry[current.production.Length];
@@ -127,22 +127,12 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
         usageList.Rebuild();
     }
 
-    public void NavigateBack() {
-        if (history.Count > 0) {
-            var last = history[^1];
-            SetItem(last, false);
-            history.RemoveAt(history.Count - 1);
-        }
-    }
-
     /// <summary>
     /// Handle KeyDown event. 
-    /// Allow for using backspace to backtrack to whatever was viewed previously.
-    /// Most of the code is similar to Yafc\Windows\DependencyExplorer.cs.
+    /// Forward to the NavigationHelper for navigation key handling.
     /// </summary>
     public override bool KeyDown(SDL.SDL_Keysym key) {
-        if (key.scancode is SDL.SDL_Scancode.SDL_SCANCODE_BACKSPACE or SDL.SDL_Scancode.SDL_SCANCODE_KP_BACKSPACE) {
-            NavigateBack();
+        if (navigationHelper.HandkeKeyDownNavigation(key)) {
             return true;
         }
         return base.KeyDown(key);
