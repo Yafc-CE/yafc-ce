@@ -37,6 +37,11 @@ public sealed class NavigationHelper() {
             return;
         }
 
+        // If we add a new item to the history, remove any "forward looking" history.
+        if (history.Count > currentIndex + 1) {
+            history.RemoveRange(currentIndex + 1, history.Count - (currentIndex + 1));
+        }
+
         history.Add(newItem);
         if (history.Count > MaxHistory) {
             history.RemoveRange(0, ItemsToRemoveWhenMaxHit);
@@ -52,7 +57,12 @@ public sealed class NavigationHelper() {
     /// </summary>
     public bool HandkeKeyDownNavigation(SDL.SDL_Keysym key) {
         if (key.scancode is SDL.SDL_Scancode.SDL_SCANCODE_BACKSPACE or SDL.SDL_Scancode.SDL_SCANCODE_KP_BACKSPACE) {
-            NavigateBack();
+            if ((key.mod & SDL.SDL_Keymod.KMOD_SHIFT) != 0) {
+                NavigateForward();
+            }
+            else {
+                NavigateBack();
+            }
             return true;
         }
         return false;
@@ -66,6 +76,12 @@ public sealed class NavigationHelper() {
             (defaultKeyboardFocus as INavigationTarget)?.navigationHelper.NavigateBack();
             return true;
         }
+        // Mouse button 5 (X2) is commonly used for forwards navigation.
+        // If this button is used, we do an early out to avoid treating it as a "normal" mouse click.
+        if (button == SDL.SDL_BUTTON_X2) {
+            (defaultKeyboardFocus as INavigationTarget)?.navigationHelper.NavigateForward();
+            return true;
+        }
         return false;
     }
 
@@ -74,6 +90,15 @@ public sealed class NavigationHelper() {
         // Check that currentIndex is not pointing to the first item in the list.
         if (currentIndex > 0) {
             changeDelegate(history[--currentIndex]);
+        }
+        isNavigating = false;
+    }
+
+    public void NavigateForward() {
+        isNavigating = true;
+        // Check that the item after currentIndex exists.
+        if (currentIndex < history.Count - 1) {
+            changeDelegate(history[++currentIndex]);
         }
         isNavigating = false;
     }
