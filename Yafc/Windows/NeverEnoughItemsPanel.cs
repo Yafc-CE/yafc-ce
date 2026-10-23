@@ -91,7 +91,6 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
 
     private void SetItem(Goods current) {
         if (current == this.current) {
-            // TODO: This early out doesn't seem to work?!
             return;
         }
 
