@@ -132,7 +132,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
     /// Forward to the NavigationHelper for navigation key handling.
     /// </summary>
     public override bool KeyDown(SDL.SDL_Keysym key) {
-        if (localNavigationHelper.HandkeKeyDownNavigation(key)) {
+        if (localNavigationHelper.HandleKeyDownNavigation(key)) {
             return true;
         }
         return base.KeyDown(key);

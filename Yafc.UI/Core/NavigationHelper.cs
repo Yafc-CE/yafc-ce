@@ -65,7 +65,7 @@ public sealed class NavigationHelper<T> : INavigationHelper where T : class {
     /// Allow for using backspace to backtrack to whatever was viewed previously.
     /// And shift + backspace to go "forward" from previous backtracking.
     /// </summary>
-    public bool HandkeKeyDownNavigation(SDL.SDL_Keysym key) {
+    public bool HandleKeyDownNavigation(SDL.SDL_Keysym key) {
         if (key.scancode is SDL.SDL_Scancode.SDL_SCANCODE_BACKSPACE or SDL.SDL_Scancode.SDL_SCANCODE_KP_BACKSPACE) {
             if ((key.mod & SDL.SDL_Keymod.KMOD_SHIFT) != 0) {
                 NavigateForward();
