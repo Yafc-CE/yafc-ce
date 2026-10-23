@@ -47,6 +47,12 @@ public sealed class NavigationHelper<T> : INavigationHelper where T : class {
         }
 
         history.Add(newItem);
+
+        // If we add a new item to the history, remove any "forward looking" history.
+        if (history.Count > currentIndex + 1) {
+            history.RemoveRange(currentIndex + 1, history.Count - (currentIndex + 1));
+        }
+
         if (history.Count > MaxHistory) {
             history.RemoveRange(0, ItemsToRemoveWhenMaxHit);
         }
