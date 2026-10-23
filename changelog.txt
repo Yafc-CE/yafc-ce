@@ -30,6 +30,9 @@ Date:
         - Define LuaHelpers.stage (added in 2.1) as "prototype"
         - Support for Factorio 2.1.20: item fuel_category renamed to fuel_categories (#705)
         - Don't reuse cached mod data after toggling the "expensive recipes" or "net production" options.
+    Internal changes:
+        - Removed unread variable searchQuery in Yafc/Workspace/ProjectPageView.cs.
+        - Re-enabled diagnostic IDE0052: Remove unread private members.
 ----------------------------------------------------------------------------------------------------------------------
 Version: 2.20.0
 Date: 17 July 2026
