@@ -158,7 +158,7 @@ public sealed class InputSystem {
             (defaultKeyboardFocus as INavigationTarget)?.navigationHelper.NavigateBack();
             return;
         }
-        
+
         // Mouse button 5 (X2) is commonly used for forwards navigation.
         // If this button is used, we do an early out to avoid treating it as a "normal" mouse click.
         if (button == SDL.SDL_BUTTON_X2) {
