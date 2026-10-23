@@ -23,8 +23,8 @@ Version:
 Date:
     Features:
         - Allow planet selection for production tables, and complain if the selected recipe or entity can't be used there.
-        - Allow for Mouse button X1 (AKA Mouse Button 4/Back) to navigate backwards in DependencyExplorer and ProductionLinkSummaryScreen.
-        - Allow backwards navigation with Backspace and Mouse button 4 in NeverEnoughItems.
+        - Add support for Mouse button 4 (AKA X1 or Back) to navigate backwards in DependencyExplorer and ProductionLinkSummaryScreen.
+        - Add backwards navigation with Backspace and Mouse button 4 in NeverEnoughItems.
     Fixes:
         - A mod's recommended dependencies are now correctly treated as optional
         - Define LuaHelpers.stage (added in 2.1) as "prototype"
