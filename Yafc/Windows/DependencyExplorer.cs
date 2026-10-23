@@ -183,7 +183,7 @@ public class DependencyExplorer : PseudoScreen, INavigationTarget {
         dependents.Build(gui);
     }
 
-    public void Change(FactorioObject target) {
+    private void Change(FactorioObject target) {
         navigationHelper.addHistory(target);
 
         current = target;
