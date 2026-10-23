@@ -4,7 +4,6 @@ using SDL2;
 
 namespace Yafc.UI;
 
-
 // INavigationTarget exists to support Mouse 4 and 5 (AKA X1 and X2) based navigation of cases where defaultKeyboardFocus is set to an object that implements this interface.
 public interface INavigationTarget {
     INavigationHelper navigationHelper { get; }
@@ -19,7 +18,7 @@ public interface INavigationHelper {
 /// This class is meant to separate and handle most Keyboard and mouse button based Navigation.
 /// Generally (Shift) Backspace and Mouse buttons 4 and 5 (X1 and X2 respectively)
 /// </summary>
-public sealed class NavigationHelper<T>  : INavigationHelper  where T : class {
+public sealed class NavigationHelper<T> : INavigationHelper where T : class {
     private const int MaxHistory = 100;
     private const int ItemsToRemoveWhenMaxHit = 20;
 
@@ -29,7 +28,7 @@ public sealed class NavigationHelper<T>  : INavigationHelper  where T : class {
     private readonly Action<T> changeDelegate;
     private int currentIndex = -1;
 
-    public NavigationHelper(Action<T> changeDelegate,  T? firstItem = null) {
+    public NavigationHelper(Action<T> changeDelegate, T? firstItem = null) {
         this.changeDelegate = changeDelegate;
         if (firstItem != null) {
             history.Add(firstItem);
@@ -38,7 +37,7 @@ public sealed class NavigationHelper<T>  : INavigationHelper  where T : class {
     }
 
     public void NavigateTo(T newItem) {
-        if (newItem == null) { 
+        if (newItem == null) {
             return;
         }
 

@@ -119,7 +119,9 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
                 break;
             }
             table = t;
-            if (t == table.ownerObject) continue;
+            if (t == table.ownerObject) {
+                continue;
+            }
             parents.Add(t);
         }
         return table as ProductionTable;

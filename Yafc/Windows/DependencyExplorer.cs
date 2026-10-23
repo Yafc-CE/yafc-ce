@@ -50,7 +50,7 @@ public class DependencyExplorer : PseudoScreen, INavigationTarget {
             gui.RemainingRow(0.5f).BuildText(text, TextBlockDisplayStyle.WrappedText with { Color = obj.IsAccessible() ? SchemeColor.BackgroundText : SchemeColor.BackgroundTextFaint });
         }
         if (gui.BuildFactorioObjectButtonBackground(gui.lastRect, obj, tooltipOptions: new() { ShowTypeInHeader = true }) == Click.Left) {
-            localNavigationHelper.NavigateTo(obj);;
+            localNavigationHelper.NavigateTo(obj);
         }
     }
 
