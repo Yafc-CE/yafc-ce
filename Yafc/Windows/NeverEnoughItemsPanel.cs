@@ -17,7 +17,9 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
 
     // Recent is the list of Goods shown at the top of the window, and does not contain duplicates.
     private readonly List<Goods> recent = [];
-    public NavigationHelper navigationHelper { get; }
+
+    private readonly NavigationHelper<Goods> localNavigationHelper;
+    public INavigationHelper navigationHelper => localNavigationHelper;
 
     private bool atCurrentMilestones;
 
@@ -72,7 +74,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
     private NeverEnoughItemsPanel() : base(76f) {
         // Due to NavigationHelper needing to be accesible to anything using INavigationTarget without knowing what type it's specialized for, 
         //  we need to wrap the Change call in a lambda. 
-        navigationHelper = new NavigationHelper { changeDelegate = arg => SetItem(arg) };
+        localNavigationHelper = new NavigationHelper<Goods>(SetItem);
         productionList = new ScrollArea(40f, BuildItemProduction, new Padding(0.5f));
         usageList = new ScrollArea(40f, BuildItemUsages, new Padding(0.5f));
     }
@@ -84,7 +86,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
     public static void Refresh() {
         var item = Instance.current;
         Instance.current = null!; // null-forgiving: We immediately reset this.
-        Instance.SetItem(item);
+        Instance.localNavigationHelper.NavigateTo(item);
     }
 
     private void SetItem(Goods current) {
@@ -101,7 +103,6 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
         // This check exists to prevent the same item being added to the recent or history more then once due to how Show + Refresh works. 
         if (this.current != null) {
             recent.Add(this.current);
-            navigationHelper.addHistory(current);
         }
 
 
@@ -132,7 +133,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
     /// Forward to the NavigationHelper for navigation key handling.
     /// </summary>
     public override bool KeyDown(SDL.SDL_Keysym key) {
-        if (navigationHelper.HandkeKeyDownNavigation(key)) {
+        if (localNavigationHelper.HandkeKeyDownNavigation(key)) {
             return true;
         }
         return base.KeyDown(key);
@@ -146,7 +147,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
         foreach (var ingredient in recipe.ingredients) {
             if (gui.BuildFactorioObjectWithAmount(ingredient.goods, ingredient.amount, ButtonDisplayStyle.NeieSmall) == Click.Left) {
                 if (ingredient.variants != null) {
-                    gui.ShowDropDown(imGui => imGui.BuildInlineObjectListAndButton(ingredient.variants, SetItem, new(LSs.NeieAcceptedVariants)));
+                    gui.ShowDropDown(imGui => imGui.BuildInlineObjectListAndButton(ingredient.variants, localNavigationHelper.NavigateTo, new(LSs.NeieAcceptedVariants)));
                 }
                 else {
                     changing = ingredient.goods;
@@ -180,7 +181,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
 
     private void CheckChanging() {
         if (changing != null) {
-            SetItem(changing);
+            localNavigationHelper.NavigateTo(changing);
             changing = null;
         }
     }
@@ -396,7 +397,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
         }
 
         if (gui.BuildFactorioObjectButtonBackground(gui.lastRect, current, SchemeColor.Grey) == Click.Left) {
-            SelectSingleObjectPanel.Select(Database.goods.explorable, new(LSs.SelectItem), SetItem);
+            SelectSingleObjectPanel.Select(Database.goods.explorable, new(LSs.SelectItem), localNavigationHelper.NavigateTo);
         }
 
         using (var split = gui.EnterHorizontalSplit(2)) {
@@ -428,7 +429,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
             Instance.changing = goods;
             return;
         }
-        Instance.SetItem(goods);
+        Instance.localNavigationHelper.NavigateTo(goods);
         MainScreen.Instance.ShowPseudoScreen(Instance);
     }
     int IComparer<RecipeEntry>.Compare(RecipeEntry x, RecipeEntry y) {

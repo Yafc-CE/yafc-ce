@@ -18,12 +18,13 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
     private float totalInput, totalOutput;
     private readonly ScrollArea scrollArea;
 
-    public NavigationHelper navigationHelper { get; }
+    private readonly NavigationHelper<ProductionLink> localNavigationHelper;
+    public INavigationHelper navigationHelper => localNavigationHelper;
 
     private ProductionLinkSummaryScreen(ProductionLink link) {
         // Due to NavigationHelper needing to be accesible to anything using INavigationTarget without knowing what type it's specialized for, 
         //  we need to wrap the Change call in a lambda. 
-        navigationHelper = new NavigationHelper { changeDelegate = arg => CalculateFlow(arg) };
+        localNavigationHelper = new NavigationHelper<ProductionLink>(CalculateFlow, link);
         scrollArea = new ScrollArea(30, BuildScrollArea);
         CalculateFlow(link);
     }
@@ -172,10 +173,10 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
 
                 // Jump to the only link, or offer a selection of links to inspect next.
                 if (row.FindLink(link.goods, out var otherLink) && otherLink != link && otherLink is ProductionLink destLink) {
-                    CalculateFlow(destLink);
+                    localNavigationHelper.NavigateTo(destLink);
                 }
                 else if (links.Count == 1) {
-                    CalculateFlow(links.First().Value);
+                    localNavigationHelper.NavigateTo(links.First().Value);
                 }
                 else {
                     gui.ShowDropDown(drawLinks);
@@ -195,7 +196,7 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
                         string header = isLinkOutput ? LSs.LinkSummarySelectProduct : LSs.LinkSummarySelectIngredient;
                         ObjectSelectOptions<IObjectWithQuality<Goods>> options = new(header, comparer, int.MaxValue);
                         if (gui.BuildInlineObjectList(links.Keys, out IObjectWithQuality<Goods>? selected, options) && gui.CloseDropdown()) {
-                            CalculateFlow(links[selected]);
+                            localNavigationHelper.NavigateTo(links[selected]);
                         }
                     }
                 }
@@ -255,7 +256,7 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
     /// Forward to the NavigationHelper for navigation key handling.
     /// </summary>
     public override bool KeyDown(SDL.SDL_Keysym key) {
-        if (navigationHelper.HandkeKeyDownNavigation(key)) {
+        if (localNavigationHelper.HandkeKeyDownNavigation(key)) {
             return true;
         }
         return base.KeyDown(key);
@@ -263,7 +264,6 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
 
     [MemberNotNull(nameof(link), nameof(input), nameof(output))]
     private void CalculateFlow(ProductionLink link) {
-        navigationHelper.addHistory(link);
         // changeLinkView calls this while iterating over one of these lists. We must create new lists rather than editing the existing ones.
         List<(RecipeRow row, float flow)> input = [], output = [];
         totalInput = totalOutput = 0;

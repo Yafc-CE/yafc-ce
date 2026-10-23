@@ -12,7 +12,8 @@ public class DependencyExplorer : PseudoScreen, INavigationTarget {
     private readonly ScrollArea dependents;
     private static readonly Padding listPad = new Padding(0.5f);
 
-    public NavigationHelper navigationHelper { get; }
+    private readonly NavigationHelper<FactorioObject> localNavigationHelper;
+    public INavigationHelper navigationHelper => localNavigationHelper;
 
     private FactorioObject current;
 
@@ -33,11 +34,10 @@ public class DependencyExplorer : PseudoScreen, INavigationTarget {
     public DependencyExplorer(FactorioObject current) : base(60f) {
         // Due to NavigationHelper needing to be accesible to anything using INavigationTarget without knowing what type it's specialized for, 
         //  we need to wrap the Change call in a lambda. 
-        navigationHelper = new NavigationHelper { changeDelegate = arg => Change(arg) };
+        localNavigationHelper = new NavigationHelper<FactorioObject>(Change, current);
         dependencies = new ScrollArea(30f, DrawDependencies);
         dependents = new ScrollArea(30f, DrawDependents);
         this.current = current;
-        navigationHelper.addHistory(current);
     }
 
     public static void Show(FactorioObject target) => MainScreen.Instance.ShowPseudoScreen(new DependencyExplorer(target));
@@ -50,7 +50,7 @@ public class DependencyExplorer : PseudoScreen, INavigationTarget {
             gui.RemainingRow(0.5f).BuildText(text, TextBlockDisplayStyle.WrappedText with { Color = obj.IsAccessible() ? SchemeColor.BackgroundText : SchemeColor.BackgroundTextFaint });
         }
         if (gui.BuildFactorioObjectButtonBackground(gui.lastRect, obj, tooltipOptions: new() { ShowTypeInHeader = true }) == Click.Left) {
-            Change(obj);
+            localNavigationHelper.NavigateTo(obj);;
         }
     }
 
@@ -120,7 +120,7 @@ public class DependencyExplorer : PseudoScreen, INavigationTarget {
         using (gui.EnterRow()) {
             gui.BuildText(LSs.DependencyCurrentlyInspecting, Font.subheader);
             if (gui.BuildFactorioObjectButtonWithText(current) == Click.Left) {
-                SelectSingleObjectPanel.Select(Database.objects.explorable, new(LSs.DependencySelectSomething), Change);
+                SelectSingleObjectPanel.Select(Database.objects.explorable, new(LSs.DependencySelectSomething), localNavigationHelper.NavigateTo);
             }
 
             gui.DrawText(gui.lastRect, LSs.DependencyClickToChangeHint, RectAlignment.MiddleRight, color: TextBlockDisplayStyle.HintText.Color);
@@ -182,8 +182,6 @@ public class DependencyExplorer : PseudoScreen, INavigationTarget {
     }
 
     private void Change(FactorioObject target) {
-        navigationHelper.addHistory(target);
-
         current = target;
         dependents.Rebuild();
         dependencies.Rebuild();
@@ -195,7 +193,7 @@ public class DependencyExplorer : PseudoScreen, INavigationTarget {
     /// Forward to the NavigationHelper for navigation key handling.
     /// </summary>
     public override bool KeyDown(SDL.SDL_Keysym key) {
-        if (navigationHelper.HandkeKeyDownNavigation(key)) {
+        if (localNavigationHelper.HandkeKeyDownNavigation(key)) {
             return true;
         }
         return base.KeyDown(key);

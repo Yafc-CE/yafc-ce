@@ -152,8 +152,10 @@ public sealed class InputSystem {
             }
         }
 
-        // Early out if Mouse keys for navigation are used.
-        if (NavigationHelper.HandleMouseButtonNavigation(button, defaultKeyboardFocus)) {
+        // Mouse button 4 (X1) is commonly used for backwards navigation.
+        // If this button is used, we do an early out to avoid treating it as a "normal" mouse click.
+        if (button == SDL.SDL_BUTTON_X1) {
+            (defaultKeyboardFocus as INavigationTarget)?.navigationHelper.NavigateBack();
             return;
         }
 
