@@ -43,7 +43,6 @@ internal interface ICustomJsonDeserializer<T> {
 }
 
 internal abstract class SerializationMap {
-    private static readonly ILogger logger = Logging.GetLogger<SerializationMap>();
     public UndoSnapshot MakeUndoSnapshot(ModelObject target) {
         UndoSnapshotBuilder snapshotBuilder = new(target);
         BuildUndo(target, snapshotBuilder);

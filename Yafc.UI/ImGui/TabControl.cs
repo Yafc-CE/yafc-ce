@@ -392,7 +392,6 @@ public sealed class TabControl {
     private sealed class PageDrawer(ImGui gui, ImGui.OverlappingAllocations controller, TabPage[] tabPages, int activePage) {
         public ImGui gui { get; } = gui;
         private int i = -1;
-        private float height;
         public bool DrawNextPage() {
             if (++i >= tabPages.Length) {
                 return false;
@@ -403,7 +402,7 @@ public sealed class TabControl {
             return true;
         }
 
-        public float GetHeight() => height = controller.maximumBottom - gui.statePosition.Top;
+        public float GetHeight() => controller.maximumBottom - gui.statePosition.Top;
 
         public IDisposable RememberState() => new State(gui, controller, i == activePage);
 

@@ -19,7 +19,6 @@ public abstract class ProjectPageView : Scrollable {
     protected float headerHeight { get; private set; }
     /// <summary>The visible size most recently passed to <see cref="Build(ImGui, Vector2)"/>. Body viewport height equals <c>visibleSize.Y - headerHeight</c>.</summary>
     protected Vector2 visibleSize { get; private set; }
-    private SearchQuery searchQuery;
     protected abstract void BuildHeader(ImGui gui);
     protected abstract void BuildContent(ImGui gui);
 
@@ -36,10 +35,7 @@ public abstract class ProjectPageView : Scrollable {
 
     public virtual float CalculateWidth() => headerContent.width;
 
-    public virtual void SetSearchQuery(SearchQuery query) {
-        searchQuery = query;
-        Rebuild();
-    }
+    public virtual void SetSearchQuery(SearchQuery query) => Rebuild();
 
     public ProjectPageView CreateSecondaryView() => (ProjectPageView)Activator.CreateInstance(GetType())!;
 
