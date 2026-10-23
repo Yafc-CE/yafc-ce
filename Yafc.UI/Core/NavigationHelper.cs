@@ -12,6 +12,7 @@ public interface INavigationTarget {
 // Extra interface layer to allow access to the Navigation functions without needing to care about the Generic type.
 public interface INavigationHelper {
     void NavigateBack();
+    void NavigateForward();
 }
 
 /// <summary>
