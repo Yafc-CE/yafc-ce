@@ -22,6 +22,7 @@
 Version:
 Date:
     Features:
+        - Add forwards navigation with Mouse Button 5 (AKA X2) and Shift + Backspace to DependencyExplorer, NeverEnoughItemsPanel and ProductionLinkSummaryScreen.
         - Allow planet selection for production tables, and complain if the selected recipe or entity can't be used there.
         - Allow for Mouse button X1 (AKA Mouse Button 4/Back) to navigate backwards in DependencyExplorer and ProductionLinkSummaryScreen.
         - Allow backwards navigation with Backspace and Mouse button 4 in NeverEnoughItems.

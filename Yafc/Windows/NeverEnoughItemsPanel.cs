@@ -17,8 +17,10 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
 
     // Recent is the list of Goods shown at the top of the window, and does not contain duplicates.
     private readonly List<Goods> recent = [];
-    // History is the linear history of what Goods have been shown, except when backspace is used to navigate backwards through history.
-    private readonly List<Goods> history = [];
+
+    private readonly NavigationHelper<Goods> localNavigationHelper;
+    public INavigationHelper navigationHelper => localNavigationHelper;
+
     private bool atCurrentMilestones;
 
     private readonly ScrollArea productionList;
@@ -70,6 +72,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
     private RecipeEntry[] usages = [];
 
     private NeverEnoughItemsPanel() : base(76f) {
+        localNavigationHelper = new NavigationHelper<Goods>(SetItem);
         productionList = new ScrollArea(40f, BuildItemProduction, new Padding(0.5f));
         usageList = new ScrollArea(40f, BuildItemUsages, new Padding(0.5f));
     }
@@ -84,8 +87,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
         Instance.SetItem(item);
     }
 
-    private void SetItem(Goods current) => SetItem(current, true);
-    private void SetItem(Goods current, bool recordHistory) {
+    private void SetItem(Goods current) {
         if (current == this.current) {
             return;
         }
@@ -97,12 +99,6 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
 
         if (this.current != null) {
             recent.Add(this.current);
-            if (recordHistory) {
-                history.Add(this.current);
-                if (history.Count > 100) {
-                    history.RemoveRange(0, 20);
-                }
-            }
         }
 
         currentFlow = current.ApproximateFlow(atCurrentMilestones);
@@ -127,22 +123,12 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
         usageList.Rebuild();
     }
 
-    public void NavigateBack() {
-        if (history.Count > 0) {
-            var last = history[^1];
-            SetItem(last, false);
-            history.RemoveAt(history.Count - 1);
-        }
-    }
-
     /// <summary>
     /// Handle KeyDown event. 
-    /// Allow for using backspace to backtrack to whatever was viewed previously.
-    /// Most of the code is similar to Yafc\Windows\DependencyExplorer.cs.
+    /// Forward to the NavigationHelper for navigation key handling.
     /// </summary>
     public override bool KeyDown(SDL.SDL_Keysym key) {
-        if (key.scancode is SDL.SDL_Scancode.SDL_SCANCODE_BACKSPACE or SDL.SDL_Scancode.SDL_SCANCODE_KP_BACKSPACE) {
-            NavigateBack();
+        if (localNavigationHelper.HandleKeyDownNavigation(key)) {
             return true;
         }
         return base.KeyDown(key);
@@ -156,7 +142,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
         foreach (var ingredient in recipe.ingredients) {
             if (gui.BuildFactorioObjectWithAmount(ingredient.goods, ingredient.amount, ButtonDisplayStyle.NeieSmall) == Click.Left) {
                 if (ingredient.variants != null) {
-                    gui.ShowDropDown(imGui => imGui.BuildInlineObjectListAndButton(ingredient.variants, SetItem, new(LSs.NeieAcceptedVariants)));
+                    gui.ShowDropDown(imGui => imGui.BuildInlineObjectListAndButton(ingredient.variants, localNavigationHelper.NavigateTo, new(LSs.NeieAcceptedVariants)));
                 }
                 else {
                     changing = ingredient.goods;
@@ -190,7 +176,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
 
     private void CheckChanging() {
         if (changing != null) {
-            SetItem(changing);
+            localNavigationHelper.NavigateTo(changing);
             changing = null;
         }
     }
@@ -406,7 +392,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
         }
 
         if (gui.BuildFactorioObjectButtonBackground(gui.lastRect, current, SchemeColor.Grey) == Click.Left) {
-            SelectSingleObjectPanel.Select(Database.goods.explorable, new(LSs.SelectItem), SetItem);
+            SelectSingleObjectPanel.Select(Database.goods.explorable, new(LSs.SelectItem), localNavigationHelper.NavigateTo);
         }
 
         using (var split = gui.EnterHorizontalSplit(2)) {
@@ -438,7 +424,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
             Instance.changing = goods;
             return;
         }
-        Instance.SetItem(goods);
+        Instance.localNavigationHelper.NavigateTo(goods);
         MainScreen.Instance.ShowPseudoScreen(Instance);
     }
     int IComparer<RecipeEntry>.Compare(RecipeEntry x, RecipeEntry y) {

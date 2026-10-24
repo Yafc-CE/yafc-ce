@@ -11,7 +11,6 @@ using Yafc.UI;
 namespace Yafc;
 
 public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, IComparer<(RecipeRow row, float flow)> {
-    private readonly Stack<ProductionLink> links = new();
 
     private ProductionLink link;
     private List<(RecipeRow row, float flow)> input;
@@ -19,7 +18,11 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
     private float totalInput, totalOutput;
     private readonly ScrollArea scrollArea;
 
+    private readonly NavigationHelper<ProductionLink> localNavigationHelper;
+    public INavigationHelper navigationHelper => localNavigationHelper;
+
     private ProductionLinkSummaryScreen(ProductionLink link) {
+        localNavigationHelper = new NavigationHelper<ProductionLink>(CalculateFlow, link);
         scrollArea = new ScrollArea(30, BuildScrollArea);
         CalculateFlow(link);
     }
@@ -114,7 +117,9 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
                 break;
             }
             table = t;
-            if (t == table.ownerObject) continue;
+            if (t == table.ownerObject) {
+                continue;
+            }
             parents.Add(t);
         }
         return table as ProductionTable;
@@ -168,10 +173,10 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
 
                 // Jump to the only link, or offer a selection of links to inspect next.
                 if (row.FindLink(link.goods, out var otherLink) && otherLink != link && otherLink is ProductionLink destLink) {
-                    changeLinkView(destLink);
+                    localNavigationHelper.NavigateTo(destLink);
                 }
                 else if (links.Count == 1) {
-                    changeLinkView(links.First().Value);
+                    localNavigationHelper.NavigateTo(links.First().Value);
                 }
                 else {
                     gui.ShowDropDown(drawLinks);
@@ -191,7 +196,7 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
                         string header = isLinkOutput ? LSs.LinkSummarySelectProduct : LSs.LinkSummarySelectIngredient;
                         ObjectSelectOptions<IObjectWithQuality<Goods>> options = new(header, comparer, int.MaxValue);
                         if (gui.BuildInlineObjectList(links.Keys, out IObjectWithQuality<Goods>? selected, options) && gui.CloseDropdown()) {
-                            changeLinkView(links[selected]);
+                            localNavigationHelper.NavigateTo(links[selected]);
                         }
                     }
                 }
@@ -202,11 +207,6 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
                 lastRect.Width *= Math.Abs(flow / total);
                 gui.DrawRectangle(lastRect, GetFlowColor(colorIndex));
             }
-        }
-
-        void changeLinkView(ProductionLink newLink) {
-            links.Push(link);
-            CalculateFlow(newLink);
         }
     }
 
@@ -251,15 +251,12 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
         }
     };
 
-    public void NavigateBack() {
-        if (links.Count > 0) {
-            CalculateFlow(links.Pop());
-        }
-    }
-
+    /// <summary>
+    /// Handle KeyDown event. 
+    /// Forward to the NavigationHelper for navigation key handling.
+    /// </summary>
     public override bool KeyDown(SDL.SDL_Keysym key) {
-        if (key.scancode is SDL.SDL_Scancode.SDL_SCANCODE_BACKSPACE or SDL.SDL_Scancode.SDL_SCANCODE_KP_BACKSPACE) {
-            NavigateBack();
+        if (localNavigationHelper.HandleKeyDownNavigation(key)) {
             return true;
         }
         return base.KeyDown(key);
