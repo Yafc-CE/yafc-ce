@@ -38,7 +38,13 @@ public sealed class NavigationHelper<T> : INavigationHelper where T : class {
     }
 
     public void NavigateTo(T newItem) {
+        // Don't allow null entries.
         if (newItem == null) {
+            return;
+        }
+
+        // Avoid adding duplicate entries if we navigate to the same item as we are on currently.
+        if (currentIndex >= 0 && newItem == history[currentIndex]) {
             return;
         }
 
