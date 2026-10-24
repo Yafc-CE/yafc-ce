@@ -17,3 +17,4 @@ Tip: You can switch between tabs using Ctrl+PgUp or Down and reorder them using 
 Tip: You can make Yafc load faster by copying the mods folder and disabling the mods that don't affect calculations in mod-list.json.
 Tip: You can Control+Shift+Click on an ingredient to add the most cost-effective accessible recipe to the production tab.
 Tip: You can Control+Click on tab close button to delete the page instead of close.
+Tip: You can Use Backspace/Mouse 4 and Shift Backspace/Mouse 5 to quickly go backwards or forwards in Never Enough Items Explorer, Dependency Explorer and Link Summary.
