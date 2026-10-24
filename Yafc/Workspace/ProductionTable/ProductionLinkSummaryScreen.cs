@@ -22,8 +22,6 @@ public class ProductionLinkSummaryScreen : PseudoScreen, INavigationTarget, ICom
     public INavigationHelper navigationHelper => localNavigationHelper;
 
     private ProductionLinkSummaryScreen(ProductionLink link) {
-        // Due to NavigationHelper needing to be accesible to anything using INavigationTarget without knowing what type it's specialized for, 
-        //  we need to wrap the Change call in a lambda. 
         localNavigationHelper = new NavigationHelper<ProductionLink>(CalculateFlow, link);
         scrollArea = new ScrollArea(30, BuildScrollArea);
         CalculateFlow(link);

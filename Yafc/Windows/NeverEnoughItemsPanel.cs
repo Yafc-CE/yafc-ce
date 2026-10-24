@@ -72,8 +72,6 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
     private RecipeEntry[] usages = [];
 
     private NeverEnoughItemsPanel() : base(76f) {
-        // Due to NavigationHelper needing to be accesible to anything using INavigationTarget without knowing what type it's specialized for, 
-        //  we need to wrap the Change call in a lambda. 
         localNavigationHelper = new NavigationHelper<Goods>(SetItem);
         productionList = new ScrollArea(40f, BuildItemProduction, new Padding(0.5f));
         usageList = new ScrollArea(40f, BuildItemUsages, new Padding(0.5f));
@@ -99,11 +97,9 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
             recent.RemoveAt(0);
         }
 
-        // This check exists to prevent the same item being added to the recent or history more then once due to how Show + Refresh works. 
         if (this.current != null) {
             recent.Add(this.current);
         }
-
 
         currentFlow = current.ApproximateFlow(atCurrentMilestones);
         RecipeEntry[] refreshedProductions = new RecipeEntry[current.production.Length];

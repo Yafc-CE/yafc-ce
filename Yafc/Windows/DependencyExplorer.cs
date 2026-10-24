@@ -32,8 +32,6 @@ public class DependencyExplorer : PseudoScreen, INavigationTarget {
         {DependencyNode.Flags.Location, (LSs.DependencyLocation, LSs.DependencyLocationMissing)},
     };
     public DependencyExplorer(FactorioObject current) : base(60f) {
-        // Due to NavigationHelper needing to be accesible to anything using INavigationTarget without knowing what type it's specialized for, 
-        //  we need to wrap the Change call in a lambda. 
         localNavigationHelper = new NavigationHelper<FactorioObject>(Change, current);
         dependencies = new ScrollArea(30f, DrawDependencies);
         dependents = new ScrollArea(30f, DrawDependents);
