@@ -259,7 +259,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
             }
 
             gui.allocator = RectAllocator.RightRow;
-            if (gui.BuildButton(Icon.DropDown, SchemeColor.None, SchemeColor.Grey).WithTooltip(gui, LSs.ListAndSearchAll.L(ImGuiUtils.ScanToString(SDL.SDL_Scancode.SDL_SCANCODE_F))) || showSearchAll) {
+            if (gui.BuildButton(Icon.Search, SchemeColor.None, SchemeColor.Grey).WithTooltip(gui, LSs.ListAndSearchAll.L(ImGuiUtils.ScanToString(SDL.SDL_Scancode.SDL_SCANCODE_F))) || showSearchAll) {
                 showSearchAll = false;
                 updatePageList();
                 ShowDropDown(gui, gui.lastRect, missingPagesDropdown, new Padding(0f, 0f, 0f, 0.5f), 30f);
