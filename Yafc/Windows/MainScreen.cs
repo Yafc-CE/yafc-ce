@@ -658,8 +658,11 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
     }
 
     private async Task<bool> SaveProjectAs() {
+        // Use the /user/documents folder as a default instead of whatever the working directory is. (For most people the working directory is the "install" directory!)
+        // The exact folder will vary based on OS.
+        string defaultDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string? projectPath = await new FilesystemScreen(LSs.SaveProjectWindowTitle, LSs.SaveProjectWindowHeader, LSs.Save,
-            string.IsNullOrEmpty(project.attachedFileName) ? null : Path.GetDirectoryName(project.attachedFileName),
+            string.IsNullOrEmpty(project.attachedFileName) ? defaultDirectory : Path.GetDirectoryName(project.attachedFileName),
             FilesystemScreen.Mode.SelectOrCreateFile, LSs.DefaultFileName, this, null, "yafc", LSs.EnterProjectName);
         if (projectPath != null) {
             project.Save(projectPath);

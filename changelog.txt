@@ -25,6 +25,7 @@ Date:
         - Allow planet selection for production tables, and complain if the selected recipe or entity can't be used there.
         - Allow for Mouse button X1 (AKA Mouse Button 4/Back) to navigate backwards in DependencyExplorer and ProductionLinkSummaryScreen.
         - Allow backwards navigation with Backspace and Mouse button 4 in NeverEnoughItems.
+        - Update Save new projects to the Documents folder by default instead of the YAFC folder.
     Fixes:
         - A mod's recommended dependencies are now correctly treated as optional
         - Define LuaHelpers.stage (added in 2.1) as "prototype"
