@@ -157,6 +157,9 @@ csharp_preserve_single_line_blocks = true
 # Suppress "IDE0047: Remove unnecessary parentheses." because parentheses improve readability.
 dotnet_diagnostic.IDE0047.severity = none
 
+# Increase severity of "IDE0052: Remove unread private members", as it helps avoid some non-obvious dead code.
+dotnet_diagnostic.IDE0052.severity = warning
+
 # Disable "IDE0130: Namespace does not match folder structure" because VS Code Cleanup applies it automatically and breaks things.
 dotnet_style_namespace_match_folder = false
 
