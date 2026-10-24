@@ -151,6 +151,12 @@ public class DataGrid<TData>(params DataColumn<TData>[] columns) where TData : c
                 if (!column.isFixedSize) {
                     BuildHeaderResizer(gui, column, new Rect(x - 0.7f, y, 1f, headerHeight + 0.9f));
                 }
+                else { // Non-resizable columns also need dividers, draw that here in the same was as in BuildHeaderResizer
+                    Rect splitterRect = new Rect(x - 0.7f, y, 1f, headerHeight + 0.9f);
+                    float center = splitterRect.X + (splitterRect.Width * 0.5f);
+                    Rect viewRect = new Rect(center - 0.1f, splitterRect.Y, 0.2f, splitterRect.Height);
+                    gui.DrawRectangle(viewRect, SchemeColor.GreyAlt);
+                }
             }
         }
         CalculateWidth(gui);
