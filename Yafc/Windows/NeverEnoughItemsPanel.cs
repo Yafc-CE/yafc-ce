@@ -84,7 +84,7 @@ public class NeverEnoughItemsPanel : PseudoScreen, INavigationTarget, IComparer<
     public static void Refresh() {
         var item = Instance.current;
         Instance.current = null!; // null-forgiving: We immediately reset this.
-        Instance.localNavigationHelper.NavigateTo(item);
+        Instance.SetItem(item);
     }
 
     private void SetItem(Goods current) {
