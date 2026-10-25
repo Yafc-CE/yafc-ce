@@ -22,7 +22,7 @@
 Version:
 Date:
     Features:
-        
+        - Add the ability to skip the Startup Screen by automatically loading the last used project. (Configurable in Preferences)
     Fixes:
         
 ----------------------------------------------------------------------------------------------------------------------
