@@ -110,7 +110,6 @@ public class PreferencesScreen : PseudoScreen {
     private static void DrawGeneral(ImGui gui) {
         ProjectPreferences preferences = Project.current.preferences;
         ProjectSettings settings = Project.current.settings;
-        bool newValue;
 
         gui.BuildText(LSs.PrefsUnitOfTime, Font.subheader);
         using (gui.EnterRow()) {
@@ -196,7 +195,7 @@ public class PreferencesScreen : PseudoScreen {
 
         gui.AllocateSpacing();
 
-        if (gui.BuildCheckBox(LSs.PrefsShowInaccessibleMilestoneOverlays, preferences.showMilestoneOnInaccessible, out newValue)) {
+        if (gui.BuildCheckBox(LSs.PrefsShowInaccessibleMilestoneOverlays, preferences.showMilestoneOnInaccessible, out bool newValue)) {
             preferences.RecordUndo().showMilestoneOnInaccessible = newValue;
         }
 
@@ -212,6 +211,12 @@ public class PreferencesScreen : PseudoScreen {
 
         if (gui.BuildCheckBox(LSs.PrefsExportEntitiesWithFuelFilterSet, Preferences.Instance.exportEntitiesWithFuelFilter, out newValue)) {
             Preferences.Instance.exportEntitiesWithFuelFilter = newValue;
+        }
+
+        using (gui.EnterRowWithHelpIcon(LSs.PrefsSkipWelcomeScreenHint, false)) {
+            if (gui.BuildCheckBox(LSs.PrefsSkipWelcomeScreen, Preferences.Instance.skipWelcomeScreen, out newValue)) {
+                Preferences.Instance.skipWelcomeScreen = newValue;
+            }
         }
     }
 

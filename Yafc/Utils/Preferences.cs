@@ -94,6 +94,11 @@ public class Preferences {
     /// </summary>
     public bool useMostRecentSave { get; set; } = true;
 
+    /// <summary>
+    /// When enabled, if the most recent project exists, it is loaded directly instead of showing the Welcome screen. 
+    /// </summary>
+    public bool skipWelcomeScreen { get; set; } = false;
+
     public void AddProject(string dataPath, string modsPath, string projectPath, bool expensive, bool netProduction) {
         recentProjects = [.. recentProjects.Where(x => string.Compare(projectPath, x.path, StringComparison.InvariantCultureIgnoreCase) != 0)
             .Prepend(new ProjectDefinition(dataPath, modsPath, projectPath, expensive, netProduction))];

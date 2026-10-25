@@ -129,6 +129,10 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
         Workspace, Factorio, Mods
     }
 
+    // Only allow skipping of the Welcome screen the first time it tries to load a project.
+    //  Otherwise returning to it from the menu or from a failed load would cause it to not be shown.
+    private static bool isFirstLoadAttempt = true;
+
     public WelcomeScreen(ProjectDefinition? cliProject = null) : base(ImGuiUtils.DefaultScreenPadding) {
         tips = File.ReadAllLines("Data/Tips.txt");
 
@@ -148,6 +152,12 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
             ProjectDefinition? lastProject = Preferences.Instance.recentProjects.FirstOrDefault();
             SetProject(lastProject);
             _ = InputSystem.Instance.SetDefaultKeyboardFocus(this);
+
+            if (isFirstLoadAttempt && Preferences.Instance.skipWelcomeScreen && File.Exists(lastProject?.path)) {
+                isFirstLoadAttempt = false;
+                LoadProject();
+            }
+            isFirstLoadAttempt = false;
         }
     }
 
