@@ -37,6 +37,11 @@ public static class DefaultModules {
                 continue;
             }
 
+            //TURD modules use the farm module category, but must never fill the module slots
+            if (PyanodonTurd.IsTurdModule(module)) {
+                continue;
+            }
+
             //Update if this module is better (milestone order)
             Bits moduleMilestoneOrder = Milestones.Instance.GetMilestoneResult(module.id);
             if (bestModule == null || moduleMilestoneOrder > bestUnlockOrder) {
