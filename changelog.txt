@@ -24,14 +24,8 @@ Date:
     Features:
 
     Fixes:
-
-----------------------------------------------------------------------------------------------------------------------
-Version:
-Date:
-    Features:
-
-    Fixes:
         - Cost analysis: mining recipes in Factorio 2.0 were always penalized as if the resource was extremely rare. Mined resources are now considerably cheaper.
+        - Honor mod-list.json version selections regardless of mod discovery order, preventing incompatible mod versions from being mixed.
 ----------------------------------------------------------------------------------------------------------------------
 Version: 2.21.0
 Date: 25 October 2026
