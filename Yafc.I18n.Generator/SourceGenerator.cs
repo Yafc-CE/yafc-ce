@@ -3,8 +3,6 @@
 namespace Yafc.I18n.Generator;
 
 internal partial class SourceGenerator {
-    private static readonly Dictionary<string, int> localizationKeys = [];
-
     private static void Main() {
         // Find the solution root directory
         string rootDirectory = FindSolutionRootDirectory(Environment.CurrentDirectory);

@@ -29,6 +29,7 @@ Date:
         - Honor mod-list.json version selections regardless of mod discovery order, preventing incompatible mod versions from being mixed.
     Internal changes:
         - Enable diagnostic "CA1061 Do not hide base class methods" as error
+        - Enable diagnostic "IDE0052 Remove unread private members" as warning
 ----------------------------------------------------------------------------------------------------------------------
 Version: 2.21.0
 Date: 25 October 2026
