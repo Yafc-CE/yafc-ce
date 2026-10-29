@@ -8,14 +8,11 @@ namespace Yafc;
 public class SearchableList<TData>(float height, Vector2 elementSize, VirtualScrollList<TData>.Drawer drawer, SearchableList<TData>.Filter filter, IComparer<TData>? comparer = null)
     : VirtualScrollList<TData>(height, elementSize, drawer) {
 
-    private readonly List<TData> list = [];
-
     public delegate bool Filter(TData data, SearchQuery searchTokens);
 
     private readonly Filter filterFunc = filter;
 
-    // TODO (https://github.com/Yafc-CE/yafc-ce/issues/293) investigate set()
-    public new IEnumerable<TData> data {
+    public new IReadOnlyList<TData> data {
         get;
         set {
             field = value ?? [];
@@ -32,7 +29,7 @@ public class SearchableList<TData>(float height, Vector2 elementSize, VirtualScr
     } = default;
 
     private void RefreshData() {
-        list.Clear();
+        List<TData> list = [];
         if (!filter.empty) {
             foreach (var element in data) {
                 if (filterFunc(element, filter)) {

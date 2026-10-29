@@ -169,3 +169,7 @@ spelling_exclusion_path = exclusion.dic
 
 # Suppress IDE0306 because it (only?) triggers on Queue<T>, which does not have an Add method.
 dotnet_diagnostic.IDE0306.severity = none
+
+# CA1061: Do not hide base class methods, because in those cases weird bugs can occur.
+# See https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1061
+dotnet_diagnostic.CA1061.severity = error
