@@ -24,6 +24,7 @@ Date:
     Features:
         - Update the column menu and "List and search all" button icons so they are no longer mistaken for sorting.
         - Update the default save location for new projects to the Documents folder instead of the YAFC folder.
+        - Cost analysis uses the default modules of buildings that only accept their own module category (like Py farms), and the Pyanodon TURD upgrades that you select.
     Fixes:
         - Cost analysis: mining recipes in Factorio 2.0 were always penalized as if the resource was extremely rare. Mined resources are now considerably cheaper.
         - Honor mod-list.json version selections regardless of mod discovery order, preventing incompatible mod versions from being mixed.

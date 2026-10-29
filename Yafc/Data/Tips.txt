@@ -18,3 +18,4 @@ Tip: You can make Yafc load faster by copying the mods folder and disabling the 
 Tip: You can Control+Shift+Click on an ingredient to add the most cost-effective accessible recipe to the production tab.
 Tip: You can Control+Click on tab close button to delete the page instead of close.
 Tip: You can Use Backspace/Mouse 4 and Shift Backspace/Mouse 5 to quickly go backwards or forwards in Never Enough Items Explorer, Dependency Explorer and Link Summary.
+Tip: Buildings that only accept their own modules (like Py farms) use the best module you have access to, in production tables and in the cost analysis. Add higher-tier modules as milestones to leave them out until you have them.

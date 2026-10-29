@@ -37,4 +37,40 @@ public class PyanodonTurdTests {
         Assert.True(GetModule("fish-upgrade-module").IsAccessibleWithCurrentMilestones());
         Assert.Null(DefaultModules.GetSingleCategoryModule(GetCrafter("fish-farm-mk01"), GetRecipe("fish")));
     }
+
+    [Fact]
+    public void GetSelectedBonus_AppliesOnlyOnceSelected_AndMatchesTheBuildingTier() {
+        Project project = LuaDependentTestHelper.GetProjectForLua();
+        Assert.Null(PyanodonTurd.GetSelectedBonus(GetCrafter("moondrop-greenhouse-mk01")));
+
+        SelectTurd(project, "carbon-capture");
+        SelectTurd(project, "hh");
+
+        Assert.Equal((0.5f, -0.5f), PyanodonTurd.GetSelectedBonus(GetCrafter("moondrop-greenhouse-mk01")));
+        Assert.Equal((1f, -0.5f), PyanodonTurd.GetSelectedBonus(GetCrafter("moondrop-greenhouse-mk02")));
+        // A missing tier suffix means mk01.
+        Assert.Equal((0.5f, 0f), PyanodonTurd.GetSelectedBonus(GetCrafter("guar-gum-plantation")));
+        // Accepts the TURD modules of several upgrades, so it is not their target.
+        Assert.Null(PyanodonTurd.GetSelectedBonus(GetCrafter("reproductive-complex")));
+        // Not selected.
+        Assert.Null(PyanodonTurd.GetSelectedBonus(GetCrafter("fish-farm-mk01")));
+    }
+
+    [Fact]
+    public void CostAnalysis_UsesTheDefaultFarmModule_AndTheSelectedTurd() {
+        Project project = LuaDependentTestHelper.GetProjectForLua();
+        var costs = CostAnalysis.Instance.recipeCost;
+
+        // Both farm recipes take the same time in the same kind of building, but only the moondrop greenhouse has a farm module.
+        float moondrop = costs[GetRecipe("moondrop")];
+        Assert.True(moondrop < costs[GetRecipe("fish")]);
+
+        SelectTurd(project, "carbon-capture");
+        Assert.True(CostAnalysis.Instance.recipeCost[GetRecipe("moondrop")] < moondrop);
+    }
+
+    private static void SelectTurd(Project project, string subtech) {
+        project.settings.SetFlag(Database.objectsByTypeName["Technology.turd-select-" + subtech], ProjectPerItemFlags.MarkedAccessible, true);
+        Analysis.ProcessAnalyses(new System.Progress<(string, string)>(), project, new ErrorCollector());
+    }
 }
