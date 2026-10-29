@@ -39,4 +39,4 @@ jobs:
       run: dotnet restore
 
     - name: Format
-      run: dotnet format --verify-no-changes --diagnostics IDE0055 --severity info --verbosity diagnostic
+      run: dotnet format --verify-no-changes --diagnostics IDE0055 IDE0052 --severity info --verbosity diagnostic
