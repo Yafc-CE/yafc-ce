@@ -24,6 +24,7 @@ Date:
     Features:
         
     Fixes:
+        - Draw the missing column dividers before Recipe and after Entity in the production table header.
         
 ----------------------------------------------------------------------------------------------------------------------
 Version: 2.21.0
