@@ -98,8 +98,7 @@ public class DataGrid<TData>(params DataColumn<TData>[] columns) where TData : c
                     float clampedWidth = MathUtils.Clamp(unclampedWidth, column.minWidth, column.maxWidth);
                     center = center - column.width + clampedWidth;
                 }
-                Rect viewRect = new Rect(center - 0.1f, rect.Y, 0.2f, rect.Height);
-                gui.DrawRectangle(viewRect, SchemeColor.GreyAlt);
+                DrawColumnSeparator(gui, rect, center);
                 break;
             case ImGuiAction.MouseMove:
                 _ = gui.ConsumeMouseOver(rect, RenderingUtils.cursorHorizontalResize);
@@ -148,14 +147,13 @@ public class DataGrid<TData>(params DataColumn<TData>[] columns) where TData : c
                 rect.Bottom = gui.statePosition.Y;
                 x += column.width + spacing;
 
+                Rect splitterRect = new Rect(x - 0.7f, y, 1f, headerHeight + 0.9f);
                 if (!column.isFixedSize) {
-                    BuildHeaderResizer(gui, column, new Rect(x - 0.7f, y, 1f, headerHeight + 0.9f));
+                    BuildHeaderResizer(gui, column, splitterRect);
                 }
-                else { // Non-resizable columns also need dividers, draw that here in the same was as in BuildHeaderResizer
-                    Rect splitterRect = new Rect(x - 0.7f, y, 1f, headerHeight + 0.9f);
+                else {
                     float center = splitterRect.X + (splitterRect.Width * 0.5f);
-                    Rect viewRect = new Rect(center - 0.1f, splitterRect.Y, 0.2f, splitterRect.Height);
-                    gui.DrawRectangle(viewRect, SchemeColor.GreyAlt);
+                    DrawColumnSeparator(gui, splitterRect, center);
                 }
             }
         }
@@ -168,6 +166,11 @@ public class DataGrid<TData>(params DataColumn<TData>[] columns) where TData : c
             gui.DrawRectangle(separator, SchemeColor.GreyAlt);
             //DrawVerticalGrid(gui, topSeparator.Bottom, separator.Top, SchemeColor.GreyAlt);
         }
+    }
+
+    private static void DrawColumnSeparator(ImGui gui, Rect rect, float center) {
+        Rect viewRect = new Rect(center - 0.1f, rect.Y, 0.2f, rect.Height);
+        gui.DrawRectangle(viewRect, SchemeColor.GreyAlt);
     }
 
     /// <summary>Builds a single grid row for the given <paramref name="element"/>, allocating each column's cell at its configured
