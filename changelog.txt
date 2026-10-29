@@ -27,6 +27,7 @@ Date:
     Fixes:
         - Cost analysis: mining recipes in Factorio 2.0 were always penalized as if the resource was extremely rare. Mined resources are now considerably cheaper.
         - Honor mod-list.json version selections regardless of mod discovery order, preventing incompatible mod versions from being mixed.
+        - Never fill buildings with Pyanodon TURD modules as default modules. They would fill every farm once pypostprocessing makes them craftable for Yafc.
     Internal changes:
         - Enable diagnostic "CA1061 Do not hide base class methods" as error
         - Enable diagnostic "IDE0052 Remove unread private members" as warning
