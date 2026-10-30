@@ -47,6 +47,7 @@
     <EmbeddedResource Include="Analysis\MapGenDensityTests.lua" />
     <EmbeddedResource Include="BareMinimumLuaData.lua" />
     <EmbeddedResource Include="Model\ProductionTableContentTests.lua" />
+    <EmbeddedResource Include="Model\PyanodonTurdTests.lua" />
     <EmbeddedResource Include="Model\ProductionTableTests.Solve_UsesProjectThreadSwitcher_ForInfeasibleLink.lua" />
     <EmbeddedResource Include="Model\RecipeParametersTests.FluidBoilingRecipes_HaveCorrectConsumption.lua" />
     <EmbeddedResource Include="Model\SelectableVariantsTests.lua" />
