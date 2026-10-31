@@ -53,17 +53,22 @@ public class PyanodonTurdTests {
         // Accepts the TURD modules of several upgrades, so it is not their target.
         Assert.Null(PyanodonTurd.GetSelectedBonus(GetCrafter("reproductive-complex")));
         // Not selected.
-        Assert.Null(PyanodonTurd.GetSelectedBonus(GetCrafter("fish-farm-mk01")));
+        Assert.Null(PyanodonTurd.GetSelectedBonus(GetCrafter("turd-only-farm-mk01")));
     }
 
     [Fact]
-    public void CostAnalysis_UsesTheDefaultFarmModule_AndTheSelectedTurd() {
-        Project project = LuaDependentTestHelper.GetProjectForLua();
+    public void CostAnalysis_UsesTheDefaultFarmModule() {
+        _ = LuaDependentTestHelper.GetProjectForLua();
         var costs = CostAnalysis.Instance.recipeCost;
 
-        // Both farm recipes take the same time in the same kind of building, but only the moondrop greenhouse has a farm module.
-        float moondrop = costs[GetRecipe("moondrop")];
-        Assert.True(moondrop < costs[GetRecipe("fish")]);
+        // Both farms are built the same way and both crops take the same time, but only the moondrop greenhouse has a farm module.
+        Assert.True(costs[GetRecipe("moondrop")] < costs[GetRecipe("turd-only-crop")]);
+    }
+
+    [Fact]
+    public void CostAnalysis_UsesTheSelectedTurd() {
+        Project project = LuaDependentTestHelper.GetProjectForLua();
+        float moondrop = CostAnalysis.Instance.recipeCost[GetRecipe("moondrop")];
 
         SelectTurd(project, "carbon-capture");
         Assert.True(CostAnalysis.Instance.recipeCost[GetRecipe("moondrop")] < moondrop);

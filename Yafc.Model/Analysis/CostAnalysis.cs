@@ -200,10 +200,6 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 minPower = 0f;
             }
 
-            if (craftingTime < 0f) {
-                craftingTime = 0f;
-            }
-
             int size = Math.Max(minSize, (recipe.ingredients.Length + recipe.products.Length) / 2);
             float sizeUsage = CostPerSecond * craftingTime * size;
             float logisticsCost = (sizeUsage * (1f + (CostPerIngredientPerSize * recipe.ingredients.Length) + (CostPerProductPerSize * recipe.products.Length))) + (CostPerMj * minPower);
@@ -437,8 +433,8 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             return null;
         }
 
-        float speedBonus = (crafter.moduleSlots * (module?.moduleSpecification.baseSpeed ?? 0f)) + (turd?.speed ?? 0f);
-        float consumptionBonus = (crafter.moduleSlots * (module?.moduleSpecification.baseConsumption ?? 0f)) + (turd?.consumption ?? 0f);
+        float speedBonus = (crafter.moduleSlots * (module?.moduleSpecification.Speed(Quality.Normal) ?? 0f)) + (turd?.speed ?? 0f);
+        float consumptionBonus = (crafter.moduleSlots * (module?.moduleSpecification.Consumption(Quality.Normal) ?? 0f)) + (turd?.consumption ?? 0f);
 
         // Factorio limits the combined speed and consumption bonuses to -80%.
         float speed = crafter.baseCraftingSpeed * MathF.Max(0.2f, 1f + speedBonus);

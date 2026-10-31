@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Yafc.Model;
@@ -26,7 +27,7 @@ public static partial class PyanodonTurd {
     /// </summary>
     /// <returns>The speed and consumption bonus of the selected TURD module, or <see langword="null"/> if none is selected.</returns>
     public static (float speed, float consumption)? GetSelectedBonus(EntityCrafter crafter) {
-        var turdModules = Database.allModules.Where(m => crafter.CanAcceptModule(m.moduleSpecification) && IsTurdModule(m)).ToList();
+        List<Module> turdModules = [.. Database.allModules.Where(m => crafter.CanAcceptModule(m.moduleSpecification) && IsTurdModule(m))];
 
         if (turdModules.Select(m => m.moduleSpecification.category).Distinct().Count() != 1) {
             return null;
@@ -44,7 +45,7 @@ public static partial class PyanodonTurd {
             }
 
             if (GetSelectionTechnology(module)!.IsAccessible()) {
-                return (module.moduleSpecification.baseSpeed, module.moduleSpecification.baseConsumption);
+                return (module.moduleSpecification.Speed(Quality.Normal), module.moduleSpecification.Consumption(Quality.Normal));
             }
         }
 
