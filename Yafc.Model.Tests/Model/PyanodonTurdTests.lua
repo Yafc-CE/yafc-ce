@@ -54,7 +54,7 @@ data = {
                 ["moondrop-greenhouse-mk01"] = {},
                 ["moondrop-greenhouse-mk02"] = {},
                 ["guar-gum-plantation"] = {},
-                ["fish-farm-mk01"] = {},
+                ["turd-only-farm-mk01"] = {},
                 ["reproductive-complex"] = {},
               },
             },
@@ -66,7 +66,7 @@ data = {
       wood = { type = "item", name = "wood", fuel_category = "chemical", fuel_value = "2MJ" },
       moondrop = { type = "item", name = "moondrop" },
       guar = { type = "item", name = "guar" },
-      fish = { type = "item", name = "fish" },
+      ["turd-only-crop"] = { type = "item", name = "turd-only-crop" },
     },
     module = {
       -- The farm module of the moondrop greenhouses.
@@ -79,26 +79,29 @@ data = {
         type = "module", name = "carbon-capture-module-mk02", category = "moondrop", tier = 2, effect = { speed = 1, consumption = -0.5 },
       },
       ["hh-module-mk01"] = { type = "module", name = "hh-module-mk01", category = "guar", tier = 1, effect = { speed = 0.5 } },
-      ["fish-upgrade-module"] = { type = "module", name = "fish-upgrade-module", category = "fish", tier = 1, effect = { speed = 10 } },
+      ["turd-only-upgrade-module"] = {
+        type = "module", name = "turd-only-upgrade-module", category = "turd-only", tier = 1, effect = { speed = 10 },
+      },
       -- Named like a TURD module, but without a turd-select technology.
       ["lonely-module"] = { type = "module", name = "lonely-module", category = "lonely", tier = 1, effect = { speed = 1 } },
     },
     technology = {
       ["turd-select-carbon-capture"] = turd_selection("carbon-capture"),
       ["turd-select-hh"] = turd_selection("hh"),
-      ["turd-select-fish-upgrade"] = turd_selection("fish-upgrade"),
+      ["turd-select-turd-only-upgrade"] = turd_selection("turd-only-upgrade"),
     },
     recipe = {
       wood = free_recipe("wood", "crafting", "wood", 1),
       ["moondrop-mk01"] = free_recipe("moondrop-mk01", "crafting", "moondrop-mk01", 1),
       -- Craftable, as pypostprocessing intends for Yafc once pybugreports#1632 is fixed. carbon-capture-module-mk02 stays uncraftable, as today.
       ["carbon-capture-module-mk01"] = free_recipe("carbon-capture-module-mk01", "crafting", "carbon-capture-module-mk01", 1),
-      ["fish-upgrade-module"] = free_recipe("fish-upgrade-module", "crafting", "fish-upgrade-module", 1),
+      ["turd-only-upgrade-module"] = free_recipe("turd-only-upgrade-module", "crafting", "turd-only-upgrade-module", 1),
       moondrop = free_recipe("moondrop", "moondrop-farm", "moondrop", 60),
       guar = free_recipe("guar", "guar-farm", "guar", 60),
-      fish = free_recipe("fish", "fish-farm", "fish", 60),
+      ["turd-only-crop"] = free_recipe("turd-only-crop", "turd-only-farm", "turd-only-crop", 60),
     },
     ["assembling-machine"] = {
+      -- Crafts the farm and TURD modules.
       gatherer = {
         type = "assembling-machine",
         name = "gatherer",
@@ -107,13 +110,15 @@ data = {
         energy_source = { type = "void" },
         energy_usage = "1kW",
       },
+      -- Farms with a farm module (moondrop-mk01) and a tiered TURD upgrade (carbon-capture).
       ["moondrop-greenhouse-mk01"] = farm("moondrop-greenhouse-mk01", "moondrop-farm", { "moondrop" }),
       ["moondrop-greenhouse-mk02"] = farm("moondrop-greenhouse-mk02", "moondrop-farm", { "moondrop" }),
       -- A tier-1 building without the -mk01 suffix, like Pyanodon's guar gum plantation.
       ["guar-gum-plantation"] = farm("guar-gum-plantation", "guar-farm", { "guar" }),
-      ["fish-farm-mk01"] = farm("fish-farm-mk01", "fish-farm", { "fish" }),
+      -- A farm whose only module is a TURD module, so it has no default module.
+      ["turd-only-farm-mk01"] = farm("turd-only-farm-mk01", "turd-only-farm", { "turd-only" }),
       -- Accepts the modules of several farms, like Pyanodon's Reproductive Complex, so it is not the target of their TURD upgrades.
-      ["reproductive-complex"] = farm("reproductive-complex", "moondrop-farm", { "moondrop", "fish" }),
+      ["reproductive-complex"] = farm("reproductive-complex", "moondrop-farm", { "moondrop", "turd-only" }),
     },
   },
 }

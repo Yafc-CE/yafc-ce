@@ -10,7 +10,7 @@ public class PyanodonTurdTests {
     private static Recipe GetRecipe(string name) => Database.recipes.all.Single(r => r.name == name);
 
     [Fact]
-    public void IsTurdModule_RecognisesTurdModulesByName_WhetherCraftableOrNot() {
+    public void IsTurdModule_RecognizesTurdModulesByName_WhetherCraftableOrNot() {
         _ = LuaDependentTestHelper.GetProjectForLua();
 
         // Craftable, as pypostprocessing intends once pybugreports#1632 is fixed.
@@ -19,7 +19,7 @@ public class PyanodonTurdTests {
         // Uncraftable, as today.
         Assert.False(GetModule("carbon-capture-module-mk02").IsAutomatable());
         Assert.True(PyanodonTurd.IsTurdModule(GetModule("carbon-capture-module-mk02")));
-        Assert.True(PyanodonTurd.IsTurdModule(GetModule("fish-upgrade-module")));
+        Assert.True(PyanodonTurd.IsTurdModule(GetModule("turd-only-upgrade-module")));
 
         Assert.False(PyanodonTurd.IsTurdModule(GetModule("moondrop-mk01")));
         // Named like a TURD module, but there is no turd-select-lonely technology.
@@ -33,9 +33,9 @@ public class PyanodonTurdTests {
         Assert.True(GetModule("carbon-capture-module-mk01").IsAccessibleWithCurrentMilestones());
         Assert.Equal(GetModule("moondrop-mk01"), DefaultModules.GetSingleCategoryModule(GetCrafter("moondrop-greenhouse-mk01"), GetRecipe("moondrop")));
 
-        // The only accessible module in the fish category is a TURD module.
-        Assert.True(GetModule("fish-upgrade-module").IsAccessibleWithCurrentMilestones());
-        Assert.Null(DefaultModules.GetSingleCategoryModule(GetCrafter("fish-farm-mk01"), GetRecipe("fish")));
+        // The only accessible module of the TURD-only farm is a TURD module.
+        Assert.True(GetModule("turd-only-upgrade-module").IsAccessibleWithCurrentMilestones());
+        Assert.Null(DefaultModules.GetSingleCategoryModule(GetCrafter("turd-only-farm-mk01"), GetRecipe("turd-only-crop")));
     }
 
     [Fact]

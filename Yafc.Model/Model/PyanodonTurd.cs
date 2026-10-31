@@ -9,7 +9,7 @@ namespace Yafc.Model;
 /// "&lt;subtech&gt;-module", or "&lt;subtech&gt;-module-mk0N" when each building tier gets its own variant.
 /// </summary>
 /// <remarks>
-/// TURD modules are recognised by these names instead of by being uncraftable: pypostprocessing intends to make them craftable for Yafc,
+/// TURD modules are recognized by these names instead of by being uncraftable: pypostprocessing intends to make them craftable for Yafc,
 /// but does not yet, because of a naming bug (https://github.com/pyanodon/pybugreports/issues/1632).
 /// </remarks>
 public static partial class PyanodonTurd {
