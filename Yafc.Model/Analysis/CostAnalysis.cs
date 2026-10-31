@@ -415,6 +415,8 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
     /// tables fill in. Other buildings are not given modules, so their cost does not assume any.</item>
     /// <item>The TURD upgrade that the player selected for this building, if any (see <see cref="PyanodonTurd.GetSelectedBonus"/>).</item>
     /// </list>
+    /// Like in production tables, the building's built-in effect is added as well. Pyanodon's farm buildings are built with -100% speed,
+    /// so that they only work with their modules.
     /// </summary>
     /// <returns>The energy per craft and the crafting time with that setup, or <see langword="null"/> if neither applies.</returns>
     private (float power, float craftingTime)? GetModuleSetup(Recipe recipe, EntityCrafter crafter) {
@@ -433,8 +435,9 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             return null;
         }
 
-        float speedBonus = (crafter.moduleSlots * (module?.moduleSpecification.Speed(Quality.Normal) ?? 0f)) + (turd?.speed ?? 0f);
-        float consumptionBonus = (crafter.moduleSlots * (module?.moduleSpecification.Consumption(Quality.Normal) ?? 0f)) + (turd?.consumption ?? 0f);
+        Effect builtInEffect = crafter.effectReceiver.baseEffect;
+        float speedBonus = builtInEffect.speed + (crafter.moduleSlots * (module?.moduleSpecification.Speed(Quality.Normal) ?? 0f)) + (turd?.speed ?? 0f);
+        float consumptionBonus = builtInEffect.consumption + (crafter.moduleSlots * (module?.moduleSpecification.Consumption(Quality.Normal) ?? 0f)) + (turd?.consumption ?? 0f);
 
         // Factorio limits the combined speed and consumption bonuses to -80%.
         float speed = crafter.baseCraftingSpeed * MathF.Max(0.2f, 1f + speedBonus);

@@ -16,7 +16,14 @@ local function farm(name, category, module_categories)
     module_slots = 4,
     allowed_module_categories = module_categories,
     allowed_effects = farm_effects,
+    -- Pyanodon's farm buildings are built with -100% speed, so that they only work with their modules.
+    effect_receiver = { base_effect = { speed = -1 } },
   }
+end
+
+local function without_built_in_speed(building)
+  building.effect_receiver = nil
+  return building
 end
 
 local function free_recipe(name, category, result, time)
@@ -53,6 +60,7 @@ data = {
                 ["gatherer"] = {},
                 ["moondrop-greenhouse-mk01"] = {},
                 ["moondrop-greenhouse-mk02"] = {},
+                ["plain-greenhouse-mk01"] = {},
                 ["guar-gum-plantation"] = {},
                 ["turd-only-farm-mk01"] = {},
                 ["reproductive-complex"] = {},
@@ -65,12 +73,15 @@ data = {
     item = {
       wood = { type = "item", name = "wood", fuel_category = "chemical", fuel_value = "2MJ" },
       moondrop = { type = "item", name = "moondrop" },
+      ["plain-crop"] = { type = "item", name = "plain-crop" },
       guar = { type = "item", name = "guar" },
       ["turd-only-crop"] = { type = "item", name = "turd-only-crop" },
     },
     module = {
       -- The farm module of the moondrop greenhouses.
       ["moondrop-mk01"] = { type = "module", name = "moondrop-mk01", category = "moondrop", tier = 1, effect = { speed = 1 } },
+      -- The same farm module for the plain greenhouse.
+      ["plain-mk01"] = { type = "module", name = "plain-mk01", category = "plain", tier = 1, effect = { speed = 1 } },
       -- TURD modules, sharing the category of the farm modules. Tiered TURD modules have one variant per building tier.
       ["carbon-capture-module-mk01"] = {
         type = "module", name = "carbon-capture-module-mk01", category = "moondrop", tier = 1, effect = { speed = 0.5, consumption = -0.5 },
@@ -93,10 +104,12 @@ data = {
     recipe = {
       wood = free_recipe("wood", "crafting", "wood", 1),
       ["moondrop-mk01"] = free_recipe("moondrop-mk01", "crafting", "moondrop-mk01", 1),
+      ["plain-mk01"] = free_recipe("plain-mk01", "crafting", "plain-mk01", 1),
       -- Craftable, as pypostprocessing intends for Yafc once pybugreports#1632 is fixed. carbon-capture-module-mk02 stays uncraftable, as today.
       ["carbon-capture-module-mk01"] = free_recipe("carbon-capture-module-mk01", "crafting", "carbon-capture-module-mk01", 1),
       ["turd-only-upgrade-module"] = free_recipe("turd-only-upgrade-module", "crafting", "turd-only-upgrade-module", 1),
       moondrop = free_recipe("moondrop", "moondrop-farm", "moondrop", 60),
+      ["plain-crop"] = free_recipe("plain-crop", "plain-farm", "plain-crop", 60),
       guar = free_recipe("guar", "guar-farm", "guar", 60),
       ["turd-only-crop"] = free_recipe("turd-only-crop", "turd-only-farm", "turd-only-crop", 60),
     },
@@ -113,6 +126,8 @@ data = {
       -- Farms with a farm module (moondrop-mk01) and a tiered TURD upgrade (carbon-capture).
       ["moondrop-greenhouse-mk01"] = farm("moondrop-greenhouse-mk01", "moondrop-farm", { "moondrop" }),
       ["moondrop-greenhouse-mk02"] = farm("moondrop-greenhouse-mk02", "moondrop-farm", { "moondrop" }),
+      -- Like the moondrop greenhouse, but without the built-in -100% speed.
+      ["plain-greenhouse-mk01"] = without_built_in_speed(farm("plain-greenhouse-mk01", "plain-farm", { "plain" })),
       -- A tier-1 building without the -mk01 suffix, like Pyanodon's guar gum plantation.
       ["guar-gum-plantation"] = farm("guar-gum-plantation", "guar-farm", { "guar" }),
       -- A farm whose only module is a TURD module, so it has no default module.

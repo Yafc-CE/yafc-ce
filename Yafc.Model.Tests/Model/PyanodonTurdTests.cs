@@ -74,6 +74,15 @@ public class PyanodonTurdTests {
         Assert.True(CostAnalysis.Instance.recipeCost[GetRecipe("moondrop")] < moondrop);
     }
 
+    [Fact]
+    public void CostAnalysis_IncludesTheBuildingsBuiltInSpeed() {
+        _ = LuaDependentTestHelper.GetProjectForLua();
+        var costs = CostAnalysis.Instance.recipeCost;
+
+        // The two greenhouses and their modules are the same, except that the moondrop greenhouse is built with -100% speed.
+        Assert.True(costs[GetRecipe("plain-crop")] < costs[GetRecipe("moondrop")]);
+    }
+
     private static void SelectTurd(Project project, string subtech) {
         project.settings.SetFlag(Database.objectsByTypeName["Technology.turd-select-" + subtech], ProjectPerItemFlags.MarkedAccessible, true);
         Analysis.ProcessAnalyses(new System.Progress<(string, string)>(), project, new ErrorCollector());
