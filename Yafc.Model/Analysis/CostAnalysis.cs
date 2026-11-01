@@ -417,9 +417,10 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
     /// <item>The TURD upgrade that the player selected for this building, if any (see <see cref="PyanodonTurd.GetSelectedBonus"/>).</item>
     /// </list>
     /// Like in production tables, the building's built-in effect is added as well. Pyanodon's farm buildings are built with -100% speed,
-    /// so that they only work with their modules.
+    /// so that they only work with their modules. A building that accepts only one module category gets its built-in effect even when
+    /// none of its modules is available yet, so that it never looks cheaper without its module than with it.
     /// </summary>
-    /// <returns>The energy per craft and the crafting time with that setup, or <see langword="null"/> if neither applies.</returns>
+    /// <returns>The energy per craft and the crafting time with that setup, or <see langword="null"/> if none of this applies.</returns>
     private (float energyPerCraft, float craftingTime)? GetModuledEnergyAndTime(Recipe recipe, EntityCrafter crafter) {
         if (crafter.energy.type == EntityEnergyType.Void || crafter.moduleSlots <= 0) {
             return null;
@@ -432,7 +433,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
 
         Module? module = DefaultModules.GetSingleCategoryModule(crafter, recipe);
 
-        if (module is null && turd is null) {
+        if (module is null && turd is null && crafter.allowedModuleCategories is not [_]) {
             return null;
         }
 

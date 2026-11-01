@@ -61,6 +61,8 @@ data = {
                 ["moondrop-greenhouse-mk01"] = {},
                 ["moondrop-greenhouse-mk02"] = {},
                 ["plain-greenhouse-mk01"] = {},
+                ["weak-greenhouse-mk01"] = {},
+                ["locked-greenhouse-mk01"] = {},
                 ["guar-gum-plantation"] = {},
                 ["turd-only-farm-mk01"] = {},
                 ["reproductive-complex"] = {},
@@ -74,6 +76,8 @@ data = {
       wood = { type = "item", name = "wood", fuel_category = "chemical", fuel_value = "2MJ" },
       moondrop = { type = "item", name = "moondrop" },
       ["plain-crop"] = { type = "item", name = "plain-crop" },
+      ["weak-crop"] = { type = "item", name = "weak-crop" },
+      ["locked-crop"] = { type = "item", name = "locked-crop" },
       guar = { type = "item", name = "guar" },
       ["turd-only-crop"] = { type = "item", name = "turd-only-crop" },
     },
@@ -82,6 +86,9 @@ data = {
       ["moondrop-mk01"] = { type = "module", name = "moondrop-mk01", category = "moondrop", tier = 1, effect = { speed = 1 } },
       -- The same farm module for the plain greenhouse.
       ["plain-mk01"] = { type = "module", name = "plain-mk01", category = "plain", tier = 1, effect = { speed = 1 } },
+      -- Farm modules that barely make up for the built-in -100% speed. locked-mk01 has no recipe, so it isn't available.
+      ["weak-mk01"] = { type = "module", name = "weak-mk01", category = "weak", tier = 1, effect = { speed = 0.05 } },
+      ["locked-mk01"] = { type = "module", name = "locked-mk01", category = "locked", tier = 1, effect = { speed = 0.05 } },
       -- TURD modules, sharing the category of the farm modules. Tiered TURD modules have one variant per building tier.
       ["carbon-capture-module-mk01"] = {
         type = "module", name = "carbon-capture-module-mk01", category = "moondrop", tier = 1, effect = { speed = 0.5, consumption = -0.5 },
@@ -105,11 +112,14 @@ data = {
       wood = free_recipe("wood", "crafting", "wood", 1),
       ["moondrop-mk01"] = free_recipe("moondrop-mk01", "crafting", "moondrop-mk01", 1),
       ["plain-mk01"] = free_recipe("plain-mk01", "crafting", "plain-mk01", 1),
+      ["weak-mk01"] = free_recipe("weak-mk01", "crafting", "weak-mk01", 1),
       -- Craftable, as pypostprocessing intends for Yafc once pybugreports#1632 is fixed. carbon-capture-module-mk02 stays uncraftable, as today.
       ["carbon-capture-module-mk01"] = free_recipe("carbon-capture-module-mk01", "crafting", "carbon-capture-module-mk01", 1),
       ["turd-only-upgrade-module"] = free_recipe("turd-only-upgrade-module", "crafting", "turd-only-upgrade-module", 1),
       moondrop = free_recipe("moondrop", "moondrop-farm", "moondrop", 60),
       ["plain-crop"] = free_recipe("plain-crop", "plain-farm", "plain-crop", 60),
+      ["weak-crop"] = free_recipe("weak-crop", "weak-farm", "weak-crop", 60),
+      ["locked-crop"] = free_recipe("locked-crop", "locked-farm", "locked-crop", 60),
       guar = free_recipe("guar", "guar-farm", "guar", 60),
       ["turd-only-crop"] = free_recipe("turd-only-crop", "turd-only-farm", "turd-only-crop", 60),
     },
@@ -128,6 +138,9 @@ data = {
       ["moondrop-greenhouse-mk02"] = farm("moondrop-greenhouse-mk02", "moondrop-farm", { "moondrop" }),
       -- Like the moondrop greenhouse, but without the built-in -100% speed.
       ["plain-greenhouse-mk01"] = without_built_in_speed(farm("plain-greenhouse-mk01", "plain-farm", { "plain" })),
+      -- Two identical greenhouses with a weak farm module, but the module of the locked greenhouse isn't available.
+      ["weak-greenhouse-mk01"] = farm("weak-greenhouse-mk01", "weak-farm", { "weak" }),
+      ["locked-greenhouse-mk01"] = farm("locked-greenhouse-mk01", "locked-farm", { "locked" }),
       -- A tier-1 building without the -mk01 suffix, like Pyanodon's guar gum plantation.
       ["guar-gum-plantation"] = farm("guar-gum-plantation", "guar-farm", { "guar" }),
       -- A farm whose only module is a TURD module, so it has no default module.

@@ -83,6 +83,15 @@ public class PyanodonTurdTests {
         Assert.True(costs[GetRecipe("plain-crop")] < costs[GetRecipe("moondrop")]);
     }
 
+    [Fact]
+    public void CostAnalysis_FarmWithoutItsModule_IsNotCheaperThanWithIt() {
+        _ = LuaDependentTestHelper.GetProjectForLua();
+        var costs = CostAnalysis.Instance.recipeCost;
+
+        Assert.Null(DefaultModules.GetSingleCategoryModule(GetCrafter("locked-greenhouse-mk01"), GetRecipe("locked-crop")));
+        Assert.True(costs[GetRecipe("weak-crop")] <= costs[GetRecipe("locked-crop")]);
+    }
+
     private static void SelectTurd(Project project, string subtech) {
         project.settings.SetFlag(Database.objectsByTypeName["Technology.turd-select-" + subtech], ProjectPerItemFlags.MarkedAccessible, true);
         Analysis.ProcessAnalyses(new System.Progress<(string, string)>(), project, new ErrorCollector());
