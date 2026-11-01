@@ -157,8 +157,8 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 // Like the energy, the time is only adjusted for buildings that are designed around their own modules.
                 float crafterTime = recipe.time;
 
-                if (GetModuleSetup(recipe, crafter) is (float moduledPower, float moduledTime)) {
-                    power = moduledPower;
+                if (GetModuledEnergyAndTime(recipe, crafter) is (float moduledEnergy, float moduledTime)) {
+                    power = moduledEnergy;
                     crafterTime = moduledTime;
                 }
 
@@ -409,7 +409,8 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
     }
 
     /// <summary>
-    /// Finds the module setup of buildings that are designed around modules, such as Pyanodon's farm buildings:
+    /// Calculates the energy per craft and the crafting time of buildings that are designed around modules, such as Pyanodon's farm
+    /// buildings, with this module setup:
     /// <list type="bullet">
     /// <item>The default module from <see cref="DefaultModules.GetSingleCategoryModule"/> in every slot, the same module that production
     /// tables fill in. Other buildings are not given modules, so their cost does not assume any.</item>
@@ -419,7 +420,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
     /// so that they only work with their modules.
     /// </summary>
     /// <returns>The energy per craft and the crafting time with that setup, or <see langword="null"/> if neither applies.</returns>
-    private (float power, float craftingTime)? GetModuleSetup(Recipe recipe, EntityCrafter crafter) {
+    private (float energyPerCraft, float craftingTime)? GetModuledEnergyAndTime(Recipe recipe, EntityCrafter crafter) {
         if (crafter.energy.type == EntityEnergyType.Void || crafter.moduleSlots <= 0) {
             return null;
         }
@@ -435,6 +436,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             return null;
         }
 
+        // Pyanodon's farm buildings are built with -100% speed, so that they only work with their modules.
         Effect builtInEffect = crafter.effectReceiver.baseEffect;
         float speedBonus = builtInEffect.speed + (crafter.moduleSlots * (module?.moduleSpecification.Speed(Quality.Normal) ?? 0f)) + (turd?.speed ?? 0f);
         float consumptionBonus = builtInEffect.consumption + (crafter.moduleSlots * (module?.moduleSpecification.Consumption(Quality.Normal) ?? 0f)) + (turd?.consumption ?? 0f);

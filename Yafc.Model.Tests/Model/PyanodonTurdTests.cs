@@ -68,10 +68,10 @@ public class PyanodonTurdTests {
     [Fact]
     public void CostAnalysis_UsesTheSelectedTurd() {
         Project project = LuaDependentTestHelper.GetProjectForLua();
-        float moondrop = CostAnalysis.Instance.recipeCost[GetRecipe("moondrop")];
+        float moondropCost = CostAnalysis.Instance.recipeCost[GetRecipe("moondrop")];
 
         SelectTurd(project, "carbon-capture");
-        Assert.True(CostAnalysis.Instance.recipeCost[GetRecipe("moondrop")] < moondrop);
+        Assert.True(CostAnalysis.Instance.recipeCost[GetRecipe("moondrop")] < moondropCost);
     }
 
     [Fact]
