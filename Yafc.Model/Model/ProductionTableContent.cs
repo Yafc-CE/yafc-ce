@@ -784,46 +784,14 @@ public sealed class RecipeRow : ModelObject<ProductionTable>, IGroupedElement<Pr
             return;
         }
 
-        if (recipe.target is not Recipe targetRecipe) {
+        if (recipe.target is not Recipe) {
             return;
-        }
-
-        if (entity.target.allowedModuleCategories is not [string moduleCategory]) {
-            return;
-        }
-
-        IObjectWithQuality<Module>? bestModule = null;
-        Bits bestUnlockOrder = default;
-
-        //Loop over all modules finding the one that is usable, unlocked, and unlocks latest according to milestones
-        foreach (Module module in Database.allModules) {
-            //Check module is in the building's allowed category
-            if (module.moduleSpecification.category != moduleCategory) {
-                continue;
-            }
-
-            //Check the recipe allows this module
-            if (!entity.target.CanAcceptModule(module.moduleSpecification) || !recipe.target.CanAcceptModule(module)) {
-                continue;
-            }
-
-            //Check if this module is currently available with the active milestones
-            if (!module.IsAccessibleWithCurrentMilestones()) {
-                continue;
-            }
-
-            //Update if this module is better (milestone order)
-            Bits moduleMilestoneOrder = Milestones.Instance.GetMilestoneResult(module.id);
-            if (bestModule == null || moduleMilestoneOrder > bestUnlockOrder) {
-                bestModule = module.With(Quality.MaxAccessible);
-                bestUnlockOrder = moduleMilestoneOrder;
-            }
         }
 
         //We have a working module, fill all the module slots
-        if (bestModule != null) {
+        if (DefaultModules.GetSingleCategoryModule(entity.target, recipe.target) is Module bestModule) {
             modules = new ModuleTemplateBuilder {
-                list = [(bestModule, 0)]
+                list = [(bestModule.With(Quality.MaxAccessible), 0)]
             }.Build(this);
         }
     }

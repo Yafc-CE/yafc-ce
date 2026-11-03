@@ -37,11 +37,13 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
     public Mapping<Recipe, float> recipeWastePercentage;
     public Goods[]? importantItems;
     private readonly bool onlyCurrentMilestones = onlyCurrentMilestones;
+    private readonly Dictionary<EntityCrafter, (float speed, float consumption)?> turdBonusCache = [];
     private string? itemAmountPrefix;
 
     private bool ShouldInclude(FactorioObject obj) => onlyCurrentMilestones ? obj.IsAutomatableWithCurrentMilestones() : obj.IsAutomatable();
 
     public override void Compute(Project project, ErrorCollector warnings) {
+        turdBonusCache.Clear();
         var workspaceSolver = DataUtils.CreateSolver();
         var objective = workspaceSolver.Objective();
         objective.SetMaximization();
@@ -151,6 +153,10 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 }
 
                 float power = crafter.energy.type == EntityEnergyType.Void ? 0f : recipe.time * crafter.basePower / (crafter.baseCraftingSpeed * crafter.energy.effectivity);
+
+                if (GetModuledEnergy(recipe, crafter) is float moduledEnergy) {
+                    power = moduledEnergy;
+                }
 
                 if (power < minPower) {
                     minPower = power;
@@ -395,6 +401,48 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             .OrderByDescending(x => flow[x] * cost[x] * x.usages.Count(y => ShouldInclude(y) && recipeWastePercentage[y] == 0f))];
 
         workspaceSolver.Dispose();
+    }
+
+    /// <summary>
+    /// Calculates the energy per craft of buildings that are designed around modules, such as Pyanodon's farm
+    /// buildings, with this module setup:
+    /// <list type="bullet">
+    /// <item>The default module from <see cref="DefaultModules.GetSingleCategoryModule"/> in every slot, the same module that production
+    /// tables fill in. Other buildings are not given modules, so their cost does not assume any.</item>
+    /// <item>The TURD upgrade that the player selected for this building, if any (see <see cref="PyanodonTurd.GetSelectedBonus"/>).</item>
+    /// </list>
+    /// Like in production tables, the building's built-in effect is added as well. Pyanodon's farm buildings are built with -100% speed,
+    /// so that they only work with their modules. A building that accepts only one module category gets its built-in effect even when
+    /// none of its modules is available yet, so that it never looks cheaper without its module than with it.
+    /// The time part of the cost keeps assuming speed 1, like for all other buildings, so the speed of this setup only affects the energy.
+    /// </summary>
+    /// <returns>The energy per craft with that setup, or <see langword="null"/> if none of this applies.</returns>
+    private float? GetModuledEnergy(Recipe recipe, EntityCrafter crafter) {
+        if (crafter.energy.type == EntityEnergyType.Void || crafter.moduleSlots <= 0) {
+            return null;
+        }
+
+        if (!turdBonusCache.TryGetValue(crafter, out var turd)) {
+            turd = PyanodonTurd.GetSelectedBonus(crafter);
+            turdBonusCache[crafter] = turd;
+        }
+
+        Module? module = DefaultModules.GetSingleCategoryModule(crafter, recipe);
+
+        if (module is null && turd is null && crafter.allowedModuleCategories is not [_]) {
+            return null;
+        }
+
+        // Pyanodon's farm buildings are built with -100% speed, so that they only work with their modules.
+        Effect builtInEffect = crafter.effectReceiver.baseEffect;
+        float speedBonus = builtInEffect.speed + (crafter.moduleSlots * (module?.moduleSpecification.Speed(Quality.Normal) ?? 0f)) + (turd?.speed ?? 0f);
+        float consumptionBonus = builtInEffect.consumption + (crafter.moduleSlots * (module?.moduleSpecification.Consumption(Quality.Normal) ?? 0f)) + (turd?.consumption ?? 0f);
+
+        // Factorio limits the combined speed and consumption bonuses to -80%.
+        float speed = crafter.baseCraftingSpeed * MathF.Max(0.2f, 1f + speedBonus);
+        float power = crafter.basePower * MathF.Max(0.2f, 1f + consumptionBonus);
+
+        return recipe.time * power / (speed * crafter.energy.effectivity);
     }
 
     public static string GetDisplayCost(FactorioObject goods) {
