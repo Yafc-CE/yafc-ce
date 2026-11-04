@@ -525,7 +525,9 @@ internal partial class FactorioDataDeserializer {
                             if (source.factorioType is not "asteroid-chunk") {
                                 // Mining, but not asteroid collection
                                 // This requires lazy initialization. Entity spawn locations are loaded in later iterations of this loop.
-                                recipe.lazyCraftingSurfaces = new(() => source.spawnLocations);
+                                // A mod can mark a resource as available that has no known spawn locations, for example because it spawns on
+                                // surfaces that the mod creates at runtime. Such a resource has no location requirement.
+                                recipe.lazyCraftingSurfaces = new(() => source.spawnLocations is [] && rootAccessible.Contains(source) ? null : source.spawnLocations);
                             }
                         }
                         else if (recipe.sourceTiles.Count > 0) {

@@ -46,6 +46,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Analysis\CostAnalysisCrafterTests.lua" />
     <EmbeddedResource Include="Analysis\MapGenDensityTests.lua" />
+    <EmbeddedResource Include="Analysis\ScriptEnabledResourceTests.lua" />
     <EmbeddedResource Include="BareMinimumLuaData.lua" />
     <EmbeddedResource Include="Model\ProductionTableContentTests.lua" />
     <EmbeddedResource Include="Model\ProductionTableTests.Solve_UsesProjectThreadSwitcher_ForInfeasibleLink.lua" />
