@@ -312,6 +312,10 @@ public partial class Project : ModelObject {
     private static partial Regex AutosaveRegex();
 }
 
+/// <summary>
+/// Project-wide values that can change the solver results, so the pages are solved again when these change.
+/// Values that don't need this go in <see cref="ProjectPreferences"/>.
+/// </summary>
 public class ProjectSettings(Project project) : ModelObject<Project>(project) {
     public List<FactorioObject> milestones { get; } = [];
     public SortedList<FactorioObject, ProjectPerItemFlags> itemFlags { get; } = new SortedList<FactorioObject, ProjectPerItemFlags>(DataUtils.DeterministicComparer);
@@ -342,6 +346,10 @@ public class ProjectSettings(Project project) : ModelObject<Project>(project) {
     public float GetReactorBonusMultiplier() => 4f - (2f / reactorSizeX) - (2f / reactorSizeY);
 }
 
+/// <summary>
+/// Project-wide values that don't require the solver to run again, such as display units and default belts.
+/// Values that do need this go in <see cref="ProjectSettings"/>.
+/// </summary>
 public class ProjectPreferences(Project owner) : ModelObject<Project>(owner) {
     public int time { get; set; } = 1;
     public float itemUnit { get; set; }
