@@ -30,6 +30,7 @@ Date:
         - Honor mod-list.json version selections regardless of mod discovery order, preventing incompatible mod versions from being mixed.
         - Draw the missing column dividers before Recipe and after Entity in the production table header.
         - Never fill buildings with Pyanodon TURD modules as default modules. They would fill every farm once pypostprocessing makes them craftable for Yafc.
+        - Cost analysis: recipes are no longer capped at 1000 MJ of energy per craft or a crafter size of 15, and recipes without polluting crafters no longer get a pollution cost.
     Internal changes:
         - Enable diagnostic "CA1061 Do not hide base class methods" as error
         - Enable diagnostic "IDE0052 Remove unread private members" as warning

@@ -135,9 +135,9 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             // TODO incorporate fuel selection. Now just select fuel if it only uses 1 fuel
             Goods? singleUsedFuel = null;
             float singleUsedFuelAmount = 0f;
-            float minEmissions = 100f;
-            int minSize = 15;
-            float minPower = 1000f;
+            float minEmissions = float.PositiveInfinity;
+            int minSize = int.MaxValue;
+            float minPower = float.PositiveInfinity;
 
             foreach (var crafter in recipe.crafters) {
                 foreach ((_, float e) in crafter.energy.emissions) {
@@ -191,8 +191,22 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 }
             }
 
+            // A heat-powered first crafter ends the loop before these are set, so its recipe is charged a fixed size and energy instead.
+            if (minSize == int.MaxValue) {
+                minSize = 15;
+            }
+
+            if (float.IsPositiveInfinity(minPower)) {
+                minPower = 1000f;
+            }
+
             if (minPower < 0f) {
                 minPower = 0f;
+            }
+
+            // Crafters without emissions don't pollute.
+            if (float.IsPositiveInfinity(minEmissions)) {
+                minEmissions = 0f;
             }
 
             int size = Math.Max(minSize, (recipe.ingredients.Length + recipe.products.Length) / 2);
