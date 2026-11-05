@@ -68,6 +68,7 @@ data = {
                 ["b-unlocked-assembler"] = {},
                 ["b-basic-assembler"] = {},
                 lab = {},
+                ["flexible-furnace"] = {},
               },
             },
           },
@@ -87,6 +88,7 @@ data = {
       ["a-milestone-assembler"] = { type = "item", name = "a-milestone-assembler", place_result = "a-milestone-assembler" },
       -- Places the base assembler. Its variant is placed with this item too.
       ["base-assembler"] = { type = "item", name = "base-assembler", place_result = "base-assembler" },
+      flexible = { type = "item", name = "flexible" },
       modest = { type = "item", name = "modest" },
       hungry = { type = "item", name = "hungry" },
       huge = { type = "item", name = "huge" },
@@ -111,6 +113,7 @@ data = {
       ["milestone-or-not"] = free_recipe("milestone-or-not", "milestone-or-not"),
       pack = free_recipe("pack", "crafting"),
       ["a-milestone-assembler"] = locked_recipe("a-milestone-assembler", "crafting"),
+      flexible = free_recipe("flexible", "flexible"),
     },
     technology = {
       -- Researched with the pack, so the milestone assembler can be built, but not with the current milestones.
@@ -147,6 +150,8 @@ data = {
       ["a-milestone-assembler"] = crafter("a-milestone-assembler", "milestone-or-not", "1kW", { type = "void" }, 1),
       ["b-basic-assembler"] = crafter("b-basic-assembler", "milestone-or-not", "1kW", { type = "void" }),
       ["a-variant-assembler"] = placed_by(crafter("a-variant-assembler", "varied", "1kW", { type = "void" }, 1), "base-assembler"),
+      -- Burns wood or peat.
+      ["flexible-furnace"] = crafter("flexible-furnace", "flexible", "500MW", { type = "burner", fuel_categories = { "chemical", "peat" } }),
     },
     lab = {
       lab = {

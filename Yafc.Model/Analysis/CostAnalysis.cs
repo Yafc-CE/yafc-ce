@@ -196,9 +196,15 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 minEmissions = 0f;
             }
 
+            if (singleUsedFuel?.isPower == true) {
+                singleUsedFuel = null;
+            }
+
             int size = Math.Max(minSize, (recipe.ingredients.Length + recipe.products.Length) / 2);
             float sizeUsage = CostPerSecond * recipe.time * size;
-            float logisticsCost = (sizeUsage * (1f + (CostPerIngredientPerSize * recipe.ingredients.Length) + (CostPerProductPerSize * recipe.products.Length))) + (CostPerMj * minPower);
+            // When every crafter burns the same single fuel, that fuel is added to the recipe below and already pays for the energy.
+            float energyCost = singleUsedFuel == null ? CostPerMj * minPower : 0f;
+            float logisticsCost = (sizeUsage * (1f + (CostPerIngredientPerSize * recipe.ingredients.Length) + (CostPerProductPerSize * recipe.products.Length))) + energyCost;
 
             // Special handling for spoilage recipes: cost depends on container efficiency and stack size
             // Spoilage happens in storage containers where many stacks spoil in parallel
@@ -207,10 +213,6 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 // Cost is based on storage space needed: time / (stackSize * slotsPerTile)
                 // This reflects that larger stacks and better containers reduce infrastructure cost
                 logisticsCost = CostPerSecond * recipe.time / (stackSize * bestContainerSlotsPerTile);
-            }
-
-            if (singleUsedFuel?.isPower == true) {
-                singleUsedFuel = null;
             }
 
             var constraint = workspaceSolver.MakeConstraint(double.NegativeInfinity, 0, recipe.name);

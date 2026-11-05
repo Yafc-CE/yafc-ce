@@ -8,6 +8,8 @@ public class PyanodonTurdTests {
     private static Module GetModule(string name) => Database.allModules.Single(m => m.name == name);
     private static EntityCrafter GetCrafter(string name) => (EntityCrafter)Database.objectsByTypeName["Entity." + name];
     private static Recipe GetRecipe(string name) => Database.recipes.all.Single(r => r.name == name);
+    // The farms burn only wood, so their energy is part of the crop's cost through the wood, not part of the recipe's own cost.
+    private static Goods GetItem(string name) => (Goods)Database.objectsByTypeName["Item." + name];
 
     [Fact]
     public void IsTurdModule_RecognizesTurdModulesByName_WhetherCraftableOrNot() {
@@ -59,47 +61,48 @@ public class PyanodonTurdTests {
     [Fact]
     public void CostAnalysis_UsesTheDefaultFarmModule() {
         _ = LuaDependentTestHelper.GetProjectForLua();
-        var costs = CostAnalysis.Instance.recipeCost;
+        var costs = CostAnalysis.Instance.cost;
 
         // Both farms are built the same way and both crops take the same time, but only the moondrop greenhouse has a farm module.
-        Assert.True(costs[GetRecipe("moondrop")] < costs[GetRecipe("turd-only-crop")]);
+        Assert.True(costs[GetItem("moondrop")] < costs[GetItem("turd-only-crop")]);
     }
 
     [Fact]
     public void CostAnalysis_UsesTheSelectedTurd() {
         Project project = LuaDependentTestHelper.GetProjectForLua();
-        float moondropCost = CostAnalysis.Instance.recipeCost[GetRecipe("moondrop")];
+        float moondropCost = CostAnalysis.Instance.cost[GetItem("moondrop")];
 
         SelectTurd(project, "carbon-capture");
-        Assert.True(CostAnalysis.Instance.recipeCost[GetRecipe("moondrop")] < moondropCost);
+        Assert.True(CostAnalysis.Instance.cost[GetItem("moondrop")] < moondropCost);
     }
 
     [Fact]
     public void CostAnalysis_IncludesTheBuildingsBuiltInSpeed() {
         _ = LuaDependentTestHelper.GetProjectForLua();
-        var costs = CostAnalysis.Instance.recipeCost;
+        var costs = CostAnalysis.Instance.cost;
 
         // The two greenhouses and their modules are the same, except that the moondrop greenhouse is built with -100% speed.
-        Assert.True(costs[GetRecipe("plain-crop")] < costs[GetRecipe("moondrop")]);
+        Assert.True(costs[GetItem("plain-crop")] < costs[GetItem("moondrop")]);
     }
 
     [Fact]
     public void CostAnalysis_FarmWithoutItsModule_IsNotCheaperThanWithIt() {
         _ = LuaDependentTestHelper.GetProjectForLua();
-        var costs = CostAnalysis.Instance.recipeCost;
+        var costs = CostAnalysis.Instance.cost;
 
         Assert.Null(DefaultModules.GetSingleCategoryModule(GetCrafter("locked-greenhouse-mk01"), GetRecipe("locked-crop")));
-        Assert.True(costs[GetRecipe("weak-crop")] <= costs[GetRecipe("locked-crop")]);
+        Assert.True(costs[GetItem("weak-crop")] <= costs[GetItem("locked-crop")]);
     }
 
     [Fact]
     public void CostAnalysis_TimeCostAssumesSpeed1_LikeOtherBuildings() {
         _ = LuaDependentTestHelper.GetProjectForLua();
-        var costs = CostAnalysis.Instance.recipeCost;
+        var costs = CostAnalysis.Instance.cost;
+        float woodCost = costs[GetItem("wood")];
 
         // Both take 60 s at 1 MW. The plain greenhouse runs at speed 0.5 and uses 120 MJ, the moondrop greenhouse runs at speed 0.4 and
-        // uses 150 MJ. At 0.1 per MJ that is a difference of 3, and the speed adds nothing to it through the time.
-        Assert.Equal(3f, costs[GetRecipe("moondrop")] - costs[GetRecipe("plain-crop")], 3);
+        // uses 150 MJ. That is 15 more wood at 2 MJ each, and the speed adds nothing to it through the time.
+        Assert.Equal(15 * woodCost, costs[GetItem("moondrop")] - costs[GetItem("plain-crop")], 3);
     }
 
     private static void SelectTurd(Project project, string subtech) {

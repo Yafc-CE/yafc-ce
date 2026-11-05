@@ -5,6 +5,7 @@ namespace Yafc.Model.Tests;
 [Collection("LuaDependentTests")]
 public class CostAnalysisCrafterTests {
     private static Recipe GetRecipe(string name) => (Recipe)Database.objectsByTypeName["Recipe." + name];
+    private static Goods GetItem(string name) => (Goods)Database.objectsByTypeName["Item." + name];
 
     // Each test recipe takes 1 second, has no ingredients and makes one item: the size cost of a 3x3 crafter plus the item cost.
     private const float SmallCrafterCost = (0.1f * 3 * 1.2f) + 0.02f;
@@ -12,10 +13,23 @@ public class CostAnalysisCrafterTests {
     [Fact]
     public void CostAnalysis_CountsEnergyAbove1000MJ() {
         _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var costs = CostAnalysis.Instance.cost;
+        float woodCost = costs[GetItem("wood")];
+
+        // These furnaces burn only wood (2 MJ), so 500 MJ and 2000 MJ take 250 and 1000 wood.
+        Assert.Equal(SmallCrafterCost + (250 * woodCost), costs[GetItem("modest")], 1e-1f);
+        Assert.Equal(SmallCrafterCost + (1000 * woodCost), costs[GetItem("hungry")], 1e-1f);
+    }
+
+    [Fact]
+    public void CostAnalysis_SingleFuelCrafter_PaysForTheFuelOnly() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
         var costs = CostAnalysis.Instance.recipeCost;
 
-        Assert.Equal(SmallCrafterCost + (0.1f * 500), costs[GetRecipe("modest")], 1e-3f);
-        Assert.Equal(SmallCrafterCost + (0.1f * 2000), costs[GetRecipe("hungry")], 1e-3f);
+        // The wood that the furnace burns is added to the recipe, so the recipe itself has no energy cost.
+        Assert.Equal(SmallCrafterCost, costs[GetRecipe("modest")], 1e-3f);
+        // The flexible furnace can burn wood or peat, so its 500 MJ per craft are charged as energy instead.
+        Assert.Equal(SmallCrafterCost + (0.1f * 500), costs[GetRecipe("flexible")], 1e-3f);
     }
 
     [Fact]
@@ -33,7 +47,8 @@ public class CostAnalysisCrafterTests {
         var costs = CostAnalysis.Instance.recipeCost;
 
         Assert.Equal(SmallCrafterCost, costs[GetRecipe("clean")], 1e-3f);
-        Assert.Equal(SmallCrafterCost + (0.1f * 1) + (5 * 0.01f), costs[GetRecipe("dirty")], 1e-3f);
+        // The furnace burns only wood, so the recipe has no energy cost, only the pollution.
+        Assert.Equal(SmallCrafterCost + (5 * 0.01f), costs[GetRecipe("dirty")], 1e-3f);
     }
 
     [Fact]
@@ -55,9 +70,10 @@ public class CostAnalysisCrafterTests {
     [Fact]
     public void CostAnalysis_IgnoresTheCharacter_WhenABuildingCanMakeTheRecipe() {
         _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var costs = CostAnalysis.Instance.cost;
 
-        // The press is 5 wide and uses 500 MJ per craft. The character uses no energy, but doesn't count.
-        Assert.Equal((0.1f * 5 * 1.2f) + (0.1f * 500) + 0.02f, CostAnalysis.Instance.recipeCost[GetRecipe("pressed")], 1e-3f);
+        // The press is 5 wide and burns only wood (2 MJ), so its 500 MJ per craft take 250 wood. The character uses no energy, but doesn't count.
+        Assert.Equal((0.1f * 5 * 1.2f) + 0.02f + (250 * costs[GetItem("wood")]), costs[GetItem("pressed")], 1e-1f);
     }
 
     [Fact]
