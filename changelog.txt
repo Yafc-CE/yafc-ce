@@ -32,6 +32,7 @@ Date:
         - Never fill buildings with Pyanodon TURD modules as default modules. They would fill every farm once pypostprocessing makes them craftable for Yafc.
         - Cost analysis: recipes are no longer capped at 1000 MJ of energy per craft or a crafter size of 15, and recipes without polluting crafters no longer get a pollution cost.
         - Resources added to data.script_enabled can be mined again when Yafc does not know where they spawn, such as the Space Exploration resources.
+        - Cost analysis: a recipe's size, energy and pollution no longer depend on the order of its buildings' names. They now come from the buildings unlocked at the current milestones, without the character or Pyanodon TURD variant buildings.
     Internal changes:
         - Enable diagnostic "CA1061 Do not hide base class methods" as error
         - Enable diagnostic "IDE0052 Remove unread private members" as warning

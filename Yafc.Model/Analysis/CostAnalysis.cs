@@ -138,14 +138,11 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             float minEmissions = float.PositiveInfinity;
             int minSize = int.MaxValue;
             float minPower = float.PositiveInfinity;
+            bool fuelsDiffer = false;
 
-            foreach (var crafter in recipe.crafters) {
+            foreach (var crafter in GetCraftersForCost(recipe)) {
                 foreach ((_, float e) in crafter.energy.emissions) {
                     minEmissions = MathF.Min(e, minEmissions);
-                }
-
-                if (crafter.energy.type == EntityEnergyType.Heat) {
-                    break;
                 }
 
                 if (crafter.size < minSize) {
@@ -162,36 +159,26 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                     minPower = power;
                 }
 
-                foreach (var fuel in crafter.energy.fuels) {
-                    if (!ShouldInclude(fuel)) {
-                        continue;
-                    }
+                // The fuel is only added to the recipe if every crafter burns the same single fuel.
+                if (!fuelsDiffer) {
+                    Goods[] fuels = [.. crafter.energy.fuels.Where(ShouldInclude)];
 
-                    if (fuel.fuelValue <= 0f) {
-                        singleUsedFuel = null;
-                        break;
-                    }
-
-                    float amount = power / fuel.fuelValue;
-
-                    if (singleUsedFuel == null) {
+                    if (fuels is [Goods fuel] && fuel.fuelValue > 0f && (singleUsedFuel == null || singleUsedFuel == fuel)) {
+                        float amount = power / fuel.fuelValue;
+                        singleUsedFuelAmount = singleUsedFuel == null ? amount : MathF.Min(singleUsedFuelAmount, amount);
                         singleUsedFuel = fuel;
-                        singleUsedFuelAmount = amount;
-                    }
-                    else if (singleUsedFuel == fuel) {
-                        singleUsedFuelAmount = MathF.Min(singleUsedFuelAmount, amount);
                     }
                     else {
-                        singleUsedFuel = null;
-                        break;
+                        fuelsDiffer = true;
                     }
-                }
-                if (singleUsedFuel == null) {
-                    break;
                 }
             }
 
-            // A heat-powered first crafter ends the loop before these are set, so its recipe is charged a fixed size and energy instead.
+            if (fuelsDiffer) {
+                singleUsedFuel = null;
+            }
+
+            // A recipe without crafters is charged a fixed size and energy.
             if (minSize == int.MaxValue) {
                 minSize = 15;
             }
@@ -416,6 +403,35 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
 
         workspaceSolver.Dispose();
     }
+
+    /// <summary>
+    /// Returns the crafters whose size, energy and pollution can set the cost of a recipe. These are the buildings that are unlocked at
+    /// the current milestones, in both costs, the same as the modules that the cost analysis uses. If none of them is, all buildings are
+    /// used. The character is only used if nothing else can make the recipe, since it uses no energy and would make the recipe look free.
+    /// Buildings that are only placed with another building's item are skipped too, see <see cref="IsPlacedWithOtherBuildingsItem"/>.
+    /// </summary>
+    private static EntityCrafter[] GetCraftersForCost(Recipe recipe) {
+        EntityCrafter[] crafters = [.. recipe.crafters.Where(c => c != Database.character && !IsPlacedWithOtherBuildingsItem(c)
+            && c.IsAccessibleWithCurrentMilestones())];
+
+        if (crafters.Length == 0) {
+            crafters = [.. recipe.crafters.Where(c => c != Database.character)];
+        }
+
+        if (crafters.Length == 0) {
+            crafters = recipe.crafters;
+        }
+
+        return crafters;
+    }
+
+    /// <summary>
+    /// Some of Pyanodon's TURD upgrades replace a building with a variant, which is placed with the original building's item. So YAFC
+    /// considers the variant accessible as soon as the original is, whichever TURD is selected. Pyanodon doesn't pass these
+    /// replacements on to YAFC, so YAFC can't tell which variant goes with the selection, and the variants are not used.
+    /// </summary>
+    private static bool IsPlacedWithOtherBuildingsItem(EntityCrafter crafter)
+        => crafter.itemsToPlace.Length > 0 && !crafter.itemsToPlace.Any(i => i.placeResult == crafter);
 
     /// <summary>
     /// Calculates the energy per craft of buildings that are designed around modules, such as Pyanodon's farm
