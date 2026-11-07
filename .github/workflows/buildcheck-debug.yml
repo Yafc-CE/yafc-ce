@@ -35,8 +35,5 @@ jobs:
     - name: Execute unit tests
       run: dotnet test
 
-    - name: Restore dependencies
-      run: dotnet restore
-
     - name: Format
       run: dotnet format --verify-no-changes --diagnostics IDE0055 IDE0052 --severity info --verbosity diagnostic
