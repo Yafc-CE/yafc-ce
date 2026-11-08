@@ -135,75 +135,100 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             // TODO incorporate fuel selection. Now just select fuel if it only uses 1 fuel
             Goods? singleUsedFuel = null;
             float singleUsedFuelAmount = 0f;
-            float minEmissions = float.PositiveInfinity;
-            int minSize = int.MaxValue;
-            float minPower = float.PositiveInfinity;
-            bool fuelsDiffer = false;
+            float emissions = float.PositiveInfinity;
+            int buildingSize = int.MaxValue;
+            float energyPerCraft = float.PositiveInfinity;
+            float craftingTime = recipe.time;
+            EntityCrafter[] crafters = GetCraftersForCost(recipe, out bool noneUnlocked);
 
-            foreach (var crafter in GetCraftersForCost(recipe)) {
-                foreach ((_, float e) in crafter.energy.emissions) {
-                    minEmissions = MathF.Min(e, minEmissions);
-                }
+            if (recipe is Mechanics) {
+                // Special recipes, such as mining, pumping and generating, assume speed 1. So their size, energy and pollution are each
+                // the lowest among their buildings, chosen separately. Taking them from the fastest building would charge for its size
+                // without the benefit of its speed. Mining keeps speed 1 on purpose, since its density penalty was calibrated at speed 1.
+                // The other special recipes are planned to use real speed, see #751.
+                bool fuelsDiffer = false;
 
-                if (crafter.size < minSize) {
-                    minSize = crafter.size;
-                }
-
-                float power = crafter.energy.type == EntityEnergyType.Void ? 0f : recipe.time * crafter.basePower / (crafter.baseCraftingSpeed * crafter.energy.effectivity);
-
-                if (GetModuledEnergy(recipe, crafter) is float moduledEnergy) {
-                    power = moduledEnergy;
-                }
-
-                if (power < minPower) {
-                    minPower = power;
-                }
-
-                // The fuel is only added to the recipe if every crafter burns the same single fuel.
-                if (!fuelsDiffer) {
-                    Goods[] fuels = [.. crafter.energy.fuels.Where(ShouldInclude)];
-
-                    if (fuels is [Goods fuel] && fuel.fuelValue > 0f && (singleUsedFuel == null || singleUsedFuel == fuel)) {
-                        float amount = power / fuel.fuelValue;
-                        singleUsedFuelAmount = singleUsedFuel == null ? amount : MathF.Min(singleUsedFuelAmount, amount);
-                        singleUsedFuel = fuel;
+                foreach (var crafter in crafters) {
+                    foreach ((_, float e) in crafter.energy.emissions) {
+                        emissions = MathF.Min(e, emissions);
                     }
-                    else {
-                        fuelsDiffer = true;
+
+                    if (crafter.size < buildingSize) {
+                        buildingSize = crafter.size;
                     }
+
+                    float energy = GetSpeedAndEnergy(recipe, crafter).energyPerCraft;
+
+                    if (energy < energyPerCraft) {
+                        energyPerCraft = energy;
+                    }
+
+                    // The fuel is only added to the recipe if every crafter burns the same single fuel.
+                    if (!fuelsDiffer) {
+                        Goods[] fuels = [.. crafter.energy.fuels.Where(ShouldInclude)];
+
+                        if (fuels is [Goods fuel] && fuel.fuelValue > 0f && (singleUsedFuel == null || singleUsedFuel == fuel)) {
+                            float amount = energy / fuel.fuelValue;
+                            singleUsedFuelAmount = singleUsedFuel == null ? amount : MathF.Min(singleUsedFuelAmount, amount);
+                            singleUsedFuel = fuel;
+                        }
+                        else {
+                            fuelsDiffer = true;
+                        }
+                    }
+                }
+
+                if (fuelsDiffer) {
+                    singleUsedFuel = null;
                 }
             }
+            else if (ChooseCrafter(recipe, crafters, noneUnlocked) is (EntityCrafter crafter, float speed, float energy)) {
+                // Other recipes are priced with one building, using its speed, size, energy and pollution together.
+                buildingSize = crafter.size;
+                energyPerCraft = energy;
 
-            if (fuelsDiffer) {
-                singleUsedFuel = null;
+                if (speed > 0f) {
+                    craftingTime = recipe.time / speed;
+                }
+
+                foreach ((_, float e) in crafter.energy.emissions) {
+                    emissions = MathF.Min(e, emissions);
+                }
+
+                Goods[] fuels = [.. crafter.energy.fuels.Where(ShouldInclude)];
+
+                if (fuels is [Goods fuel] && fuel.fuelValue > 0f) {
+                    singleUsedFuel = fuel;
+                    singleUsedFuelAmount = energy / fuel.fuelValue;
+                }
             }
 
             // A recipe without crafters is charged a fixed size and energy.
-            if (minSize == int.MaxValue) {
-                minSize = 15;
+            if (buildingSize == int.MaxValue) {
+                buildingSize = 15;
             }
 
-            if (float.IsPositiveInfinity(minPower)) {
-                minPower = 1000f;
+            if (float.IsPositiveInfinity(energyPerCraft)) {
+                energyPerCraft = 1000f;
             }
 
-            if (minPower < 0f) {
-                minPower = 0f;
+            if (energyPerCraft < 0f) {
+                energyPerCraft = 0f;
             }
 
             // Crafters without emissions don't pollute.
-            if (float.IsPositiveInfinity(minEmissions)) {
-                minEmissions = 0f;
+            if (float.IsPositiveInfinity(emissions)) {
+                emissions = 0f;
             }
 
             if (singleUsedFuel?.isPower == true) {
                 singleUsedFuel = null;
             }
 
-            int size = Math.Max(minSize, (recipe.ingredients.Length + recipe.products.Length) / 2);
-            float sizeUsage = CostPerSecond * recipe.time * size;
-            // When every crafter burns the same single fuel, that fuel is added to the recipe below and already pays for the energy.
-            float energyCost = singleUsedFuel == null ? CostPerMj * minPower : 0f;
+            int size = Math.Max(buildingSize, (recipe.ingredients.Length + recipe.products.Length) / 2);
+            float sizeUsage = CostPerSecond * craftingTime * size;
+            // When the buildings burn a single fuel, that fuel is added to the recipe below and already pays for the energy.
+            float energyCost = singleUsedFuel == null ? CostPerMj * energyPerCraft : 0f;
             float logisticsCost = (sizeUsage * (1f + (CostPerIngredientPerSize * recipe.ingredients.Length) + (CostPerProductPerSize * recipe.products.Length))) + energyCost;
 
             // Special handling for spoilage recipes: cost depends on container efficiency and stack size
@@ -267,8 +292,8 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 logisticsCost *= miningPenalty;
             }
 
-            if (minEmissions >= 0f) {
-                logisticsCost += minEmissions * CostPerPollution * recipe.time * project.settings.PollutionCostModifier;
+            if (emissions >= 0f) {
+                logisticsCost += emissions * CostPerPollution * craftingTime * project.settings.PollutionCostModifier;
             }
 
             constraint.SetUb(logisticsCost);
@@ -407,14 +432,16 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
     }
 
     /// <summary>
-    /// Returns the crafters whose size, energy and pollution can set the cost of a recipe. These are the buildings that are unlocked at
-    /// the current milestones, in both costs, the same as the modules that the cost analysis uses. If none of them is, all buildings are
-    /// used. The character is only used if nothing else can make the recipe, since it uses no energy and would make the recipe look free.
-    /// Buildings that are only placed with another building's item are skipped too, see <see cref="IsPlacedWithOtherBuildingsItem"/>.
+    /// Returns the crafters that can set the cost of a recipe. These are the buildings that are unlocked at the current milestones, in
+    /// both costs, the same as the modules that the cost analysis uses. If none of them is, all buildings are used, and
+    /// <paramref name="noneUnlocked"/> is <see langword="true"/>. The character is only used if nothing else can make the recipe, since it
+    /// uses no energy and would make the recipe look free. Buildings that are only placed with another building's item are skipped too,
+    /// see <see cref="IsPlacedWithOtherBuildingsItem"/>.
     /// </summary>
-    private static EntityCrafter[] GetCraftersForCost(Recipe recipe) {
+    private static EntityCrafter[] GetCraftersForCost(Recipe recipe, out bool noneUnlocked) {
         EntityCrafter[] crafters = [.. recipe.crafters.Where(c => c != Database.character && !IsPlacedWithOtherBuildingsItem(c)
             && c.IsAccessibleWithCurrentMilestones())];
+        noneUnlocked = crafters.Length == 0;
 
         if (crafters.Length == 0) {
             crafters = [.. recipe.crafters.Where(c => c != Database.character)];
@@ -436,45 +463,102 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
         => crafter.itemsToPlace.Length > 0 && !crafter.itemsToPlace.Any(i => i.placeResult == crafter);
 
     /// <summary>
-    /// Calculates the energy per craft of buildings that are designed around modules, such as Pyanodon's farm
-    /// buildings, with this module setup:
+    /// Chooses the building that prices a recipe, which is the fastest of <paramref name="crafters"/>. If speeds tie, the lowest energy
+    /// wins, then the smallest size. If none of the buildings is unlocked, the slowest one is used instead, since that's the first one a
+    /// player unlocks. Buildings with a crafting speed of 0 are only used if no other building can make the recipe.
+    /// </summary>
+    /// <returns>The building with its speed and energy per craft, or <see langword="null"/> if there are no crafters.</returns>
+    private (EntityCrafter crafter, float speed, float energyPerCraft)? ChooseCrafter(Recipe recipe, EntityCrafter[] crafters, bool noneUnlocked) {
+        if (crafters.Any(c => c.baseCraftingSpeed > 0f)) {
+            crafters = [.. crafters.Where(c => c.baseCraftingSpeed > 0f)];
+        }
+
+        (EntityCrafter crafter, float speed, float energyPerCraft)? best = null;
+
+        foreach (EntityCrafter crafter in crafters) {
+            (float speed, float energy) = GetSpeedAndEnergy(recipe, crafter);
+
+            if (best is not (EntityCrafter bestCrafter, float bestSpeed, float bestEnergy)) {
+                best = (crafter, speed, energy);
+                continue;
+            }
+
+            // Speeds within 0.01% of each other count as equal, so that rounding doesn't decide between them.
+            int faster = speed > bestSpeed * 1.0001f ? 1 : speed < bestSpeed * 0.9999f ? -1 : 0;
+
+            if (noneUnlocked) {
+                faster = -faster;
+            }
+
+            if (faster > 0 || (faster == 0 && (energy < bestEnergy || (energy == bestEnergy && crafter.size < bestCrafter.size)))) {
+                best = (crafter, speed, energy);
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Calculates the crafting speed and the energy per craft of a building for a recipe. Buildings that are designed around modules, such
+    /// as Pyanodon's farm buildings, use this module setup:
     /// <list type="bullet">
     /// <item>The default module from <see cref="DefaultModules.GetSingleCategoryModule"/> in every slot, the same module that production
     /// tables fill in. Other buildings are not given modules, so their cost does not assume any.</item>
+    /// <item>Buildings with negative built-in speed that accept several module categories, such as Pyanodon's Reproductive Complex, have no
+    /// default module, because the right module depends on the recipe. They use the slowest module that the recipe accepts and that is
+    /// unlocked at the current milestones.</item>
+    /// <item>If none of its modules is unlocked yet, a building with negative built-in speed uses the slowest module that it and the recipe
+    /// accept, among the modules that are accessible at all, instead of running at the minimum speed. TURD modules are never used for this, since they're only meant for buildings
+    /// whose TURD the player selected.</item>
     /// <item>The TURD upgrade that the player selected for this building, if any (see <see cref="PyanodonTurd.GetSelectedBonus"/>).</item>
     /// </list>
     /// Like in production tables, the building's built-in effect is added as well. Pyanodon's farm buildings are built with -100% speed,
-    /// so that they only work with their modules. A building that accepts only one module category gets its built-in effect even when
-    /// none of its modules is available yet, so that it never looks cheaper without its module than with it.
-    /// The time part of the cost keeps assuming speed 1, like for all other buildings, so the speed of this setup only affects the energy.
+    /// so that they only work with their modules. A building with negative built-in speed, or one that accepts only one module category,
+    /// gets its built-in effect even when none of its modules is available, so that it never looks cheaper without its module than with it.
     /// </summary>
-    /// <returns>The energy per craft with that setup, or <see langword="null"/> if none of this applies.</returns>
-    private float? GetModuledEnergy(Recipe recipe, EntityCrafter crafter) {
-        if (crafter.energy.type == EntityEnergyType.Void || crafter.moduleSlots <= 0) {
-            return null;
+    private (float speed, float energyPerCraft) GetSpeedAndEnergy(Recipe recipe, EntityCrafter crafter) {
+        float speed = crafter.baseCraftingSpeed;
+        float power = crafter.basePower;
+
+        if (crafter.moduleSlots > 0) {
+            if (!turdBonusCache.TryGetValue(crafter, out var turd)) {
+                turd = PyanodonTurd.GetSelectedBonus(crafter);
+                turdBonusCache[crafter] = turd;
+            }
+
+            Module? module = DefaultModules.GetSingleCategoryModule(crafter, recipe);
+            Effect builtInEffect = crafter.effectReceiver.baseEffect;
+            bool needsRecipeModule = builtInEffect.speed < 0f && crafter.allowedModuleCategories is not [_];
+
+            if (needsRecipeModule || (module is null && builtInEffect.speed < 0f)) {
+                Module[] usable = [.. Database.allModules.Where(m => crafter.CanAcceptModule(m.moduleSpecification) && recipe.CanAcceptModule(m)
+                    && m.IsAccessible() && !PyanodonTurd.IsTurdModule(m) && m.moduleSpecification.Speed(Quality.Normal) > 0f)];
+
+                if (needsRecipeModule) {
+                    module = usable.Where(m => m.IsAccessibleWithCurrentMilestones()).MinBy(m => m.moduleSpecification.Speed(Quality.Normal));
+                }
+
+                module ??= usable.MinBy(m => m.moduleSpecification.Speed(Quality.Normal));
+            }
+
+            if (module is not null || turd is not null || needsRecipeModule || crafter.allowedModuleCategories is [_]) {
+                float speedBonus = builtInEffect.speed + (crafter.moduleSlots * (module?.moduleSpecification.Speed(Quality.Normal) ?? 0f)) + (turd?.speed ?? 0f);
+                float consumptionBonus = builtInEffect.consumption + (crafter.moduleSlots * (module?.moduleSpecification.Consumption(Quality.Normal) ?? 0f)) + (turd?.consumption ?? 0f);
+
+                // Factorio limits the combined speed and consumption bonuses to -80%.
+                speed = crafter.baseCraftingSpeed * MathF.Max(0.2f, 1f + speedBonus);
+                power = crafter.basePower * MathF.Max(0.2f, 1f + consumptionBonus);
+            }
         }
 
-        if (!turdBonusCache.TryGetValue(crafter, out var turd)) {
-            turd = PyanodonTurd.GetSelectedBonus(crafter);
-            turdBonusCache[crafter] = turd;
+        if (crafter.energy.type == EntityEnergyType.Void) {
+            return (speed, 0f);
         }
 
-        Module? module = DefaultModules.GetSingleCategoryModule(crafter, recipe);
+        // A building that can't craft is never the one with the lowest energy.
+        float energyPerCraft = speed > 0f ? recipe.time * power / (speed * crafter.energy.effectivity) : float.PositiveInfinity;
 
-        if (module is null && turd is null && crafter.allowedModuleCategories is not [_]) {
-            return null;
-        }
-
-        // Pyanodon's farm buildings are built with -100% speed, so that they only work with their modules.
-        Effect builtInEffect = crafter.effectReceiver.baseEffect;
-        float speedBonus = builtInEffect.speed + (crafter.moduleSlots * (module?.moduleSpecification.Speed(Quality.Normal) ?? 0f)) + (turd?.speed ?? 0f);
-        float consumptionBonus = builtInEffect.consumption + (crafter.moduleSlots * (module?.moduleSpecification.Consumption(Quality.Normal) ?? 0f)) + (turd?.consumption ?? 0f);
-
-        // Factorio limits the combined speed and consumption bonuses to -80%.
-        float speed = crafter.baseCraftingSpeed * MathF.Max(0.2f, 1f + speedBonus);
-        float power = crafter.basePower * MathF.Max(0.2f, 1f + consumptionBonus);
-
-        return recipe.time * power / (speed * crafter.energy.effectivity);
+        return (speed, energyPerCraft);
     }
 
     public static string GetDisplayCost(FactorioObject goods) {

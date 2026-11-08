@@ -1,4 +1,5 @@
--- Crafters with very high energy or size, without emissions, or powered by heat, and recipes with several crafters.
+-- Crafters with very high energy or size, without emissions, or powered by heat, recipes with several crafters, crafters
+-- designed around modules, and mining drills.
 local function crafter(name, category, energy_usage, energy_source, size)
   local half = (size or 3) / 2
   return {
@@ -23,6 +24,38 @@ end
 local function placed_by(entity, item)
   entity.placeable_by = { item = item, count = 1 }
   return entity
+end
+
+local function with_speed(entity, speed)
+  entity.crafting_speed = speed
+  return entity
+end
+
+-- Like Pyanodon's farm buildings: one module slot and -100% speed, so the crafter only works with its module.
+local function needs_modules(entity, module_categories)
+  entity.module_slots = 1
+  entity.allowed_module_categories = module_categories
+  entity.allowed_effects = { "speed" }
+  entity.effect_receiver = { base_effect = { speed = -1 } }
+  return entity
+end
+
+local function module(name, category, speed)
+  return { type = "module", name = name, category = category, effect = { speed = speed } }
+end
+
+local function drill(name, mining_speed, size)
+  local half = size / 2
+  return {
+    type = "mining-drill",
+    name = name,
+    mining_speed = mining_speed,
+    energy_usage = "1kW",
+    energy_source = { type = "void" },
+    resource_categories = { "basic-solid" },
+    vector_to_place_result = { 0, -half - 0.35 },
+    selection_box = { { -half, -half }, { half, half } },
+  }
 end
 
 local function free_recipe(name, category)
@@ -69,6 +102,13 @@ data = {
                 ["b-basic-assembler"] = {},
                 lab = {},
                 ["flexible-furnace"] = {},
+                ["a-slow-assembler"] = {},
+                ["b-fast-assembler"] = {},
+                farm = {},
+                complex = {},
+                stone = {},
+                ["a-small-drill"] = {},
+                ["b-big-drill"] = {},
               },
             },
           },
@@ -95,6 +135,20 @@ data = {
       clean = { type = "item", name = "clean" },
       dirty = { type = "item", name = "dirty" },
       heated = { type = "item", name = "heated" },
+      speedy = { type = "item", name = "speedy" },
+      ["locked-speeds"] = { type = "item", name = "locked-speeds" },
+      ["c-slow-locked-assembler"] = { type = "item", name = "c-slow-locked-assembler", place_result = "c-slow-locked-assembler" },
+      ["d-fast-locked-assembler"] = { type = "item", name = "d-fast-locked-assembler", place_result = "d-fast-locked-assembler" },
+      farmed = { type = "item", name = "farmed" },
+      complexed = { type = "item", name = "complexed" },
+      stone = { type = "item", name = "stone" },
+    },
+    module = {
+      -- Both farm modules need the pack, so neither is unlocked with the current milestones.
+      ["slow-farm-module"] = module("slow-farm-module", "farm", 1),
+      ["fast-farm-module"] = module("fast-farm-module", "farm", 2),
+      -- Unlocked, but faster than the farm modules.
+      ["other-module"] = module("other-module", "other", 3),
     },
     recipe = {
       wood = free_recipe("wood", "crafting"),
@@ -114,14 +168,29 @@ data = {
       pack = free_recipe("pack", "crafting"),
       ["a-milestone-assembler"] = locked_recipe("a-milestone-assembler", "crafting"),
       flexible = free_recipe("flexible", "flexible"),
+      speedy = free_recipe("speedy", "speedy"),
+      ["locked-speeds"] = free_recipe("locked-speeds", "locked-speeds"),
+      ["c-slow-locked-assembler"] = locked_recipe("c-slow-locked-assembler", "crafting"),
+      ["d-fast-locked-assembler"] = locked_recipe("d-fast-locked-assembler", "crafting"),
+      farmed = free_recipe("farmed", "farmed"),
+      complexed = free_recipe("complexed", "complexed"),
+      ["slow-farm-module"] = locked_recipe("slow-farm-module", "crafting"),
+      ["fast-farm-module"] = locked_recipe("fast-farm-module", "crafting"),
+      ["other-module"] = free_recipe("other-module", "crafting"),
     },
     technology = {
-      -- Researched with the pack, so the milestone assembler can be built, but not with the current milestones.
+      -- Researched with the pack, so these can be built, but not with the current milestones.
       ["advanced-assembling"] = {
         type = "technology",
         name = "advanced-assembling",
         unit = { count = 1, time = 1, ingredients = { { "pack", 1 } } },
-        effects = { { type = "unlock-recipe", recipe = "a-milestone-assembler" } },
+        effects = {
+          { type = "unlock-recipe", recipe = "a-milestone-assembler" },
+          { type = "unlock-recipe", recipe = "c-slow-locked-assembler" },
+          { type = "unlock-recipe", recipe = "d-fast-locked-assembler" },
+          { type = "unlock-recipe", recipe = "slow-farm-module" },
+          { type = "unlock-recipe", recipe = "fast-farm-module" },
+        },
       },
     },
     ["assembling-machine"] = {
@@ -152,6 +221,29 @@ data = {
       ["a-variant-assembler"] = placed_by(crafter("a-variant-assembler", "varied", "1kW", { type = "void" }, 1), "base-assembler"),
       -- Burns wood or peat.
       ["flexible-furnace"] = crafter("flexible-furnace", "flexible", "500MW", { type = "burner", fuel_categories = { "chemical", "peat" } }),
+      -- The slow assembler is 3 wide, the fast one 5 wide and twice as fast.
+      ["a-slow-assembler"] = crafter("a-slow-assembler", "speedy", "1kW", { type = "void" }),
+      ["b-fast-assembler"] = with_speed(crafter("b-fast-assembler", "speedy", "1kW", { type = "void" }, 5), 2),
+      -- Both need the pack. The slow one is 5 wide, the fast one 3 wide and twice as fast.
+      ["c-slow-locked-assembler"] = crafter("c-slow-locked-assembler", "locked-speeds", "1kW", { type = "void" }, 5),
+      ["d-fast-locked-assembler"] = with_speed(crafter("d-fast-locked-assembler", "locked-speeds", "1kW", { type = "void" }), 2),
+      farm = needs_modules(crafter("farm", "farmed", "1kW", { type = "void" }), { "farm" }),
+      -- Like Pyanodon's Reproductive Complex: accepts several module categories, so it has no default module.
+      complex = needs_modules(crafter("complex", "complexed", "1kW", { type = "void" }), { "farm", "other" }),
+    },
+    resource = {
+      stone = {
+        type = "resource",
+        name = "stone",
+        minable = { mining_time = 1, result = "stone" },
+        -- A density of 0 can't be estimated, so mining stone gets no extra penalty.
+        autoplace = { probability_expression = 0 },
+      },
+    },
+    ["mining-drill"] = {
+      -- The small drill is 2 wide and mines at half speed. The big drill is 5 wide and 4 times as fast.
+      ["a-small-drill"] = drill("a-small-drill", 0.5, 2),
+      ["b-big-drill"] = drill("b-big-drill", 2, 5),
     },
     lab = {
       lab = {
@@ -189,9 +281,12 @@ defines.prototypes = {
     reactor = 0,
     character = 0,
     lab = 0,
+    resource = 0,
+    ["mining-drill"] = 0,
   },
   item = {
     item = 0,
+    module = 0,
   },
   ["space-location"] = {
     planet = 0,

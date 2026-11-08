@@ -25,6 +25,7 @@ Date:
         - Update the column menu and "List and search all" button icons so they are no longer mistaken for sorting.
         - Update the default save location for new projects to the Documents folder instead of the YAFC folder.
         - Update the cost analysis to use the default modules of buildings that only accept their own module category (like Py farms), and the Pyanodon TURD upgrades that you select.
+        - Update the cost analysis to price each recipe with its fastest building unlocked at the current milestones, using that building's speed, size, energy and pollution together. If none is unlocked, the slowest building is used. Buildings with -100% speed, like Py farms, use their slowest module if none of their modules is unlocked yet. Mining and other special recipes still assume speed 1.
     Fixes:
         - Cost analysis: mining recipes in Factorio 2.0 were always penalized as if the resource was extremely rare. Mined resources are now considerably cheaper.
         - Honor mod-list.json version selections regardless of mod discovery order, preventing incompatible mod versions from being mixed.

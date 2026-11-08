@@ -104,4 +104,46 @@ public class CostAnalysisCrafterTests {
         // The variant is 1 wide, the base assembler 3 wide.
         Assert.Equal(SmallCrafterCost + (0.1f * 0.001f), CostAnalysis.Instance.recipeCost[GetRecipe("varied")], 1e-3f);
     }
+
+    [Fact]
+    public void CostAnalysis_UsesTheFastestBuilding_WithItsSpeedAndSize() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+
+        // The fast assembler is 5 wide and twice as fast, so the recipe takes half a second. The slow one is smaller, but isn't used.
+        Assert.Equal((0.1f * 0.5f * 5 * 1.2f) + 0.02f, CostAnalysis.Instance.recipeCost[GetRecipe("speedy")], 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_UsesTheSlowestBuilding_WhenNoneIsUnlocked() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+
+        // Both assemblers need the pack. The slow one is the first that a player unlocks, so its size of 5 is used at speed 1.
+        Assert.Equal((0.1f * 5 * 1.2f) + 0.02f, CostAnalysis.Instance.recipeCost[GetRecipe("locked-speeds")], 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_BuildingWithNegativeSpeed_UsesTheSlowestModule_WhenNoneIsUnlocked() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+
+        // The farm has -100% speed. Its +100% module brings it to speed 1, instead of the 20% minimum, in both costs.
+        Assert.Equal(SmallCrafterCost, CostAnalysis.Instance.recipeCost[GetRecipe("farmed")], 1e-3f);
+        Assert.Equal(SmallCrafterCost, CostAnalysis.InstanceAtMilestones.recipeCost[GetRecipe("farmed")], 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_BuildingWithSeveralModuleCategories_UsesAnUnlockedModule() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+
+        // The +300% module is the only unlocked one, so it's used instead of the slower farm modules. The complex runs at speed 3.
+        Assert.Equal((0.1f * (1f / 3f) * 3 * 1.2f) + 0.02f, CostAnalysis.Instance.recipeCost[GetRecipe("complexed")], 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_Mining_KeepsSpeed1_AndTheSmallestDrill() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var mining = (Recipe)Database.objectsByTypeName["Mechanics.mining.basic-solid.stone"];
+
+        // The size of the 2-wide drill, at speed 1. The 5-wide drill is faster, but mining doesn't use its speed or its size.
+        Assert.Equal((0.1f * 2 * 1.2f) + 0.02f, CostAnalysis.Instance.recipeCost[mining], 1e-3f);
+    }
 }
