@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -8,7 +9,8 @@ internal sealed class ZipArchiveAdapter : IZipArchive {
 
     public ZipArchiveAdapter(Stream stream, bool leaveOpen = false) {
         _archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen);
-        Entries = _archive.Entries.Select(e => (IZipEntry)new ZipEntryAdapter(e)).ToList().AsReadOnly();
+        // Keep the first of duplicate entries, like ZipArchive.GetEntry and BackslashTolerantZipArchive do.
+        Entries = _archive.Entries.DistinctBy(e => e.FullName, StringComparer.Ordinal).Select(e => (IZipEntry)new ZipEntryAdapter(e)).ToList().AsReadOnly();
     }
 
     public IReadOnlyCollection<IZipEntry> Entries { get; }

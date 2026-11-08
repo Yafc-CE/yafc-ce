@@ -29,6 +29,7 @@ Date:
     Fixes:
         - Cost analysis: mining recipes in Factorio 2.0 were always penalized as if the resource was extremely rare. Mined resources are now considerably cheaper.
         - Honor mod-list.json version selections regardless of mod discovery order, preventing incompatible mod versions from being mixed.
+        - Fix a crash on load when a zipped mod lists the same file or folder more than once.
         - Draw the missing column dividers before Recipe and after Entity in the production table header.
         - Never fill buildings with Pyanodon TURD modules as default modules. They would fill every farm once pypostprocessing makes them craftable for Yafc.
         - Cost analysis: recipes are no longer capped at 1000 MJ of energy per craft or a crafter size of 15, and recipes without polluting crafters no longer get a pollution cost.

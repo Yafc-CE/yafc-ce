@@ -44,22 +44,45 @@ public class BackslashTolerantZipArchiveTests : IDisposable {
         bytesField!.SetValue(entry, Encoding.UTF8.GetBytes(newName));
     }
 
+    // A zip that lists a folder and a file twice, with different contents for the two copies of the file.
+    internal static MemoryStream CreateDuplicateEntriesZip() {
+        var ms = new MemoryStream();
+        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true)) {
+            archive.CreateEntry("mod/graphics/");
+            using (var s = archive.CreateEntry("mod/info.json").Open())
+                s.Write("first"u8);
+            archive.CreateEntry("mod/graphics/");
+            using (var s = archive.CreateEntry("mod/info.json").Open())
+                s.Write("second"u8);
+        }
+        ms.Position = 0;
+        return ms;
+    }
+
+    internal static string ReadEntry(IZipEntry entry) {
+        using var reader = new StreamReader(entry.Open());
+        return reader.ReadToEnd();
+    }
+
     public static readonly MemoryStream TestZip;
 
     [Fact]
-    // Ensuring ZipArchive handles duplicate names still throws during normalization
-    public void DuplicateEntryNames_AfterNormalization_Throws() {
+    public void DuplicateEntryNames_AfterNormalization_KeepsFirstEntry() {
         var ms = new MemoryStream();
         using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true)) {
-            archive.CreateEntry("mod/info.json");
+            using (var s = archive.CreateEntry("mod/info.json").Open())
+                s.Write("first"u8);
             var dup = archive.CreateEntry("PLACEHOLDER");
             using (var s = dup.Open())
-                s.Write("x"u8);
+                s.Write("second"u8);
             RenameEntry(dup, "mod\\info.json");
         }
         ms.Position = 0;
 
-        Assert.Throws<ArgumentException>(() => new BackslashTolerantZipArchive(ms));
+        using var zip = new BackslashTolerantZipArchive(ms);
+
+        Assert.Single(zip.Entries);
+        Assert.Equal("first", ReadEntry(zip.GetEntry("mod/info.json")!));
     }
 
     [Fact]
