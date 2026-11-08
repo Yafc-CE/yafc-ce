@@ -64,7 +64,49 @@ public class BackslashTolerantZipArchiveTests : IDisposable {
         return reader.ReadToEnd();
     }
 
+    // ZipArchiveEntry.Name splits on '\' only for entries made on Windows, so mark the entry as made on Unix (3 in the zip spec).
+    static void MarkMadeOnUnix(ZipArchiveEntry entry) {
+        var platformField = typeof(ZipArchiveEntry).GetField(
+            "_versionMadeByPlatform",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+        );
+
+        platformField!.SetValue(entry, Enum.ToObject(platformField.FieldType, 3));
+    }
+
     public static readonly MemoryStream TestZip;
+
+    [Fact]
+    public void Name_IsNormalized_ForBackslashEntryMadeOnUnix() {
+        var ms = new MemoryStream();
+        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true)) {
+            var entry = archive.CreateEntry("PLACEHOLDER");
+            RenameEntry(entry, "mod\\info.json");
+            MarkMadeOnUnix(entry);
+        }
+        ms.Position = 0;
+
+        using var zip = new BackslashTolerantZipArchive(ms);
+
+        Assert.Equal("info.json", zip.GetEntry("mod/info.json")!.Name);
+    }
+
+    [Fact]
+    public void Constructor_InvalidZip_DisposesStream() {
+        var ms = new MemoryStream("not a zip"u8.ToArray());
+
+        Assert.Throws<InvalidDataException>(() => new BackslashTolerantZipArchive(ms));
+        Assert.Throws<ObjectDisposedException>(() => ms.ReadByte());
+    }
+
+    [Fact]
+    public void Constructor_InvalidZip_LeaveOpen_KeepsStreamOpen() {
+        var ms = new MemoryStream("not a zip"u8.ToArray());
+
+        Assert.Throws<InvalidDataException>(() => new BackslashTolerantZipArchive(ms, leaveOpen: true));
+        ms.Position = 0; // throws if the stream was disposed
+        Assert.Equal('n', ms.ReadByte());
+    }
 
     [Fact]
     public void DuplicateEntryNames_AfterNormalization_KeepsFirstEntry() {

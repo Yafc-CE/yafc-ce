@@ -176,13 +176,18 @@ public static partial class FactorioDataSource {
 
         foreach (string fileName in Directory.EnumerateFiles(directory)) {
             if (fileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
-                FileStream fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-                IZipArchive zipArchive = new BackslashTolerantZipArchive(fileStream);
-                var infoEntry = zipArchive.Entries.FirstOrDefault(x =>
-                    x.Name.Equals("info.json", StringComparison.OrdinalIgnoreCase) &&
-                    x.FullName.IndexOf('/') == x.FullName.Length - "info.json".Length - 1);
+                IZipArchive zipArchive = new BackslashTolerantZipArchive(new FileStream(fileName, FileMode.Open, FileAccess.Read));
+                bool ownedByMod = false;
 
-                if (infoEntry != null) {
+                try {
+                    var infoEntry = zipArchive.Entries.FirstOrDefault(x =>
+                        x.Name.Equals("info.json", StringComparison.OrdinalIgnoreCase) &&
+                        x.FullName.IndexOf('/') == x.FullName.Length - "info.json".Length - 1);
+
+                    if (infoEntry == null) {
+                        continue; // not a mod, the finally closes the file
+                    }
+
                     string folder = infoEntry.FullName[..^"info.json".Length];
 
                     // built-in mods are never zipped
@@ -196,8 +201,14 @@ public static partial class FactorioDataSource {
                     }
 
                     ModInfo info = new(folder, infoEntry.Open().ReadAllBytes((int)infoEntry.Length), dataHash.GetCurrentHashAsUInt32(), 0, zipArchive);
+                    ownedByMod = true; // ModInfo.Dispose closes the archive from here on
                     mods.Add(info);
                     dataHash.Reset();
+                }
+                finally {
+                    if (!ownedByMod) {
+                        zipArchive.Dispose();
+                    }
                 }
             }
         }
