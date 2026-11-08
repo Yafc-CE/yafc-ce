@@ -6,7 +6,22 @@ public class IZipArchiveTests {
         yield return [new ZipArchiveAdapter(TestZip, leaveOpen: true)];
     }
 
+    public static IEnumerable<object[]> DuplicateEntriesArchives() {
+        yield return [new BackslashTolerantZipArchive(BackslashTolerantZipArchiveTests.CreateDuplicateEntriesZip())];
+        yield return [new ZipArchiveAdapter(BackslashTolerantZipArchiveTests.CreateDuplicateEntriesZip())];
+    }
+
     private static MemoryStream TestZip => BackslashTolerantZipArchiveTests.TestZip;
+
+    [Theory]
+    [MemberData(nameof(DuplicateEntriesArchives))]
+    internal void DuplicateEntryNames_KeepsFirstEntry(IZipArchive archive) {
+        using (archive) {
+            Assert.Equal(2, archive.Entries.Count);
+            Assert.Single(archive.Entries, e => e.FullName == "mod/graphics/");
+            Assert.Equal("first", BackslashTolerantZipArchiveTests.ReadEntry(archive.GetEntry("mod/info.json")!));
+        }
+    }
 
     [Theory]
     [MemberData(nameof(Archives))]

@@ -24,8 +24,12 @@ internal sealed class BackslashTolerantZipArchive : IZipArchive {
 
     public BackslashTolerantZipArchive(Stream stream, bool leaveOpen = false) {
         _archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen);
-        _entries = _archive.Entries.ToDictionary(e => e.FullName.Replace('\\', '/'), e => new BackslashTolerantZipEntry(e), StringComparer.Ordinal);
-        Entries = _entries.Values.ToList().AsReadOnly();
+
+        // Some archives list the same path more than once, either literally or after normalizing the slashes.
+        // Keep the first entry, like ZipArchive.GetEntry does.
+        var entries = _archive.Entries.Select(e => new BackslashTolerantZipEntry(e)).DistinctBy(e => e.FullName, StringComparer.Ordinal).ToList();
+        _entries = entries.ToDictionary(e => e.FullName, StringComparer.Ordinal);
+        Entries = entries.AsReadOnly();
     }
     public IReadOnlyCollection<IZipEntry> Entries { get; }
 
