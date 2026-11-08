@@ -146,4 +146,23 @@ public class CostAnalysisCrafterTests {
         // The size of the 2-wide drill, at speed 1. The 5-wide drill is faster, but mining doesn't use its speed or its size.
         Assert.Equal((0.1f * 2 * 1.2f) + 0.02f, CostAnalysis.Instance.recipeCost[mining], 1e-3f);
     }
+
+    [Fact]
+    public void CostAnalysis_Pumping_UsesTheFastestPump_WithItsSpeedAndSize() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var pumping = (Recipe)Database.objectsByTypeName["Mechanics.pump.water.water"];
+
+        // The big pump is 3 wide and twice as fast, so pumping 1200 water takes half a second. The small pump is 1 wide, but isn't used.
+        Assert.Equal((0.1f * 0.5f * 3 * 1.2f) + (1200 * 0.0005f), CostAnalysis.Instance.recipeCost[pumping], 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_AgriculturalTower_UsesItsPlots_AndTheWidthOfItsField() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var planting = (Recipe)Database.objectsByTypeName["Mechanics.plant.seed"];
+
+        // 48 trees grow at once, so each one takes 80 / 48 seconds. The 7 x 7 grid is 21 tiles wide. The recipe has one ingredient and
+        // one product, which are both items.
+        Assert.Equal((0.1f * (80f / 48f) * 21 * 1.3f) + (2 * 0.02f), CostAnalysis.Instance.recipeCost[planting], 1e-3f);
+    }
 }

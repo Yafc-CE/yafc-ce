@@ -1,5 +1,5 @@
 -- Crafters with very high energy or size, without emissions, or powered by heat, recipes with several crafters, crafters
--- designed around modules, and mining drills.
+-- designed around modules, mining drills, pumps and an agricultural tower.
 local function crafter(name, category, energy_usage, energy_source, size)
   local half = (size or 3) / 2
   return {
@@ -58,6 +58,17 @@ local function drill(name, mining_speed, size)
   }
 end
 
+local function pump(name, pumping_speed, size)
+  local half = size / 2
+  return {
+    type = "offshore-pump",
+    name = name,
+    fluid = "water",
+    pumping_speed = pumping_speed,
+    selection_box = { { -half, -half }, { half, half } },
+  }
+end
+
 local function free_recipe(name, category)
   return {
     type = "recipe",
@@ -109,6 +120,9 @@ data = {
                 stone = {},
                 ["a-small-drill"] = {},
                 ["b-big-drill"] = {},
+                ["a-small-pump"] = {},
+                ["b-big-pump"] = {},
+                tower = {},
               },
             },
           },
@@ -142,6 +156,11 @@ data = {
       farmed = { type = "item", name = "farmed" },
       complexed = { type = "item", name = "complexed" },
       stone = { type = "item", name = "stone" },
+      seed = { type = "item", name = "seed", plant_result = "tree" },
+      fruit = { type = "item", name = "fruit" },
+    },
+    fluid = {
+      water = { type = "fluid", name = "water", default_temperature = 15 },
     },
     module = {
       -- Both farm modules need the pack, so neither is unlocked with the current milestones.
@@ -177,6 +196,7 @@ data = {
       ["slow-farm-module"] = locked_recipe("slow-farm-module", "crafting"),
       ["fast-farm-module"] = locked_recipe("fast-farm-module", "crafting"),
       ["other-module"] = free_recipe("other-module", "crafting"),
+      seed = free_recipe("seed", "crafting"),
     },
     technology = {
       -- Researched with the pack, so these can be built, but not with the current milestones.
@@ -245,6 +265,32 @@ data = {
       ["a-small-drill"] = drill("a-small-drill", 0.5, 2),
       ["b-big-drill"] = drill("b-big-drill", 2, 5),
     },
+    ["offshore-pump"] = {
+      -- The small pump is 1 wide and pumps 1200 water per second. The big pump is 3 wide and twice as fast.
+      ["a-small-pump"] = pump("a-small-pump", 20, 1),
+      ["b-big-pump"] = pump("b-big-pump", 40, 3),
+    },
+    ["agricultural-tower"] = {
+      -- A radius of 3 gives a 7 x 7 grid, with 48 plots around the tower. The tower itself is 3 wide.
+      tower = {
+        type = "agricultural-tower",
+        name = "tower",
+        radius = 3,
+        energy_usage = "1kW",
+        energy_source = { type = "void" },
+        selection_box = { { -1.5, -1.5 }, { 1.5, 1.5 } },
+      },
+    },
+    plant = {
+      -- Grows in 80 seconds.
+      tree = {
+        type = "plant",
+        name = "tree",
+        growth_ticks = 4800,
+        minable = { mining_time = 1, result = "fruit" },
+        selection_box = { { -1, -1 }, { 1, 1 } },
+      },
+    },
     lab = {
       lab = {
         type = "lab",
@@ -283,10 +329,16 @@ defines.prototypes = {
     lab = 0,
     resource = 0,
     ["mining-drill"] = 0,
+    ["offshore-pump"] = 0,
+    ["agricultural-tower"] = 0,
+    plant = 0,
   },
   item = {
     item = 0,
     module = 0,
+  },
+  fluid = {
+    fluid = 0,
   },
   ["space-location"] = {
     planet = 0,
