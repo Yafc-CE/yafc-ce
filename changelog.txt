@@ -37,6 +37,7 @@ Date:
         - Resources added to data.script_enabled can be mined again when Yafc does not know where they spawn, such as the Space Exploration resources.
         - Cost analysis: a recipe's size, energy and pollution no longer depend on the order of its buildings' names. They now come from the buildings unlocked at the current milestones, without the character or Pyanodon TURD variant buildings.
         - Cost analysis: recipes whose buildings burn a single fuel no longer pay for their energy twice, once through the fuel and once as a flat energy cost.
+        - GUI: Deleting the last character in TextInput no longer has a delay.
     Internal changes:
         - Enable diagnostic "CA1061 Do not hide base class methods" as error
         - Enable diagnostic "IDE0052 Remove unread private members" as warning
