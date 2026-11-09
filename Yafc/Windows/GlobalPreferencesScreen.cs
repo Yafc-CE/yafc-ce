@@ -265,6 +265,14 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus
                 }
             }
 
+            if (gui.BuildCheckBox(LSs.PrefsAutosave, Preferences.Instance.autosaveEnabled, out bool autosaveEnabled)) {
+                Preferences.Instance.autosaveEnabled = autosaveEnabled;
+            }
+
+            if (gui.BuildCheckBox(LSs.PrefsExportEntitiesWithFuelFilterSet, Preferences.Instance.exportEntitiesWithFuelFilter, out bool exportEntitiesWithFuelFilter)) {
+                Preferences.Instance.exportEntitiesWithFuelFilter = exportEntitiesWithFuelFilter;
+            }
+
             gui.spacing = 1.5f;
             using (gui.EnterRow()) {
                 if (gui.BuildButton(Icon.DarkMode)) {

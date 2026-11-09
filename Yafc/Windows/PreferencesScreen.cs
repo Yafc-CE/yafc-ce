@@ -199,20 +199,6 @@ public class PreferencesScreen : PseudoScreen {
         if (gui.BuildCheckBox(LSs.PrefsShowInaccessibleMilestoneOverlays, preferences.showMilestoneOnInaccessible, out newValue)) {
             preferences.RecordUndo().showMilestoneOnInaccessible = newValue;
         }
-
-        if (gui.BuildCheckBox(LSs.PrefsDarkMode, Preferences.Instance.darkMode, out newValue)) {
-            Preferences.Instance.darkMode = newValue;
-            Preferences.Instance.Save();
-            RenderingUtils.SetColorScheme(newValue);
-        }
-
-        if (gui.BuildCheckBox(LSs.PrefsAutosave, Preferences.Instance.autosaveEnabled, out newValue)) {
-            Preferences.Instance.autosaveEnabled = newValue;
-        }
-
-        if (gui.BuildCheckBox(LSs.PrefsExportEntitiesWithFuelFilterSet, Preferences.Instance.exportEntitiesWithFuelFilter, out newValue)) {
-            Preferences.Instance.exportEntitiesWithFuelFilter = newValue;
-        }
     }
 
     protected override void ReturnPressed() => Close();
