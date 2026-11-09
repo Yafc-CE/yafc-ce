@@ -401,6 +401,10 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
             ShowPseudoScreen(new MilestonesPanel());
         }
 
+        if (gui.BuildContextMenuButton(LSs.GlobalPreferences) && gui.CloseDropdown()) {
+            _ = new GlobalPreferencesScreen(this);
+        }
+
         if (gui.BuildContextMenuButton(LSs.Preferences) && gui.CloseDropdown()) {
             PreferencesScreen.ShowPreviousState();
         }
