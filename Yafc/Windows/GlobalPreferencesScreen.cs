@@ -1,21 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net.Http;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using SDL2;
-using Serilog;
-using Yafc.Core;
 using Yafc.I18n;
-using Yafc.Model;
-using Yafc.Parser;
 using Yafc.UI;
 
 namespace Yafc;
