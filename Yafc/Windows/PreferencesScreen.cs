@@ -110,7 +110,6 @@ public class PreferencesScreen : PseudoScreen {
     private static void DrawGeneral(ImGui gui) {
         ProjectPreferences preferences = Project.current.preferences;
         ProjectSettings settings = Project.current.settings;
-        bool newValue;
 
         gui.BuildText(LSs.PrefsUnitOfTime, Font.subheader);
         using (gui.EnterRow()) {
@@ -196,8 +195,8 @@ public class PreferencesScreen : PseudoScreen {
 
         gui.AllocateSpacing();
 
-        if (gui.BuildCheckBox(LSs.PrefsShowInaccessibleMilestoneOverlays, preferences.showMilestoneOnInaccessible, out newValue)) {
-            preferences.RecordUndo().showMilestoneOnInaccessible = newValue;
+        if (gui.BuildCheckBox(LSs.PrefsShowInaccessibleMilestoneOverlays, preferences.showMilestoneOnInaccessible, out bool showMilestoneOnInaccessible)) {
+            preferences.RecordUndo().showMilestoneOnInaccessible = showMilestoneOnInaccessible;
         }
     }
 
