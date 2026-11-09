@@ -186,7 +186,8 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
 
     private async void SelectFont() {
         // Use the YAFC/Data directory as the default folder because that is where YAFC has it's existing fonts as well as where it downloads additional ones.
-        string? result = await new FilesystemScreen(LSs.OverrideFont, LSs.OverrideFontLong, LSs.Ok, AppDomain.CurrentDomain.BaseDirectory + "Data", FilesystemScreen.Mode.SelectFile, null, this, null, null);
+        // Additionally it only shows (and allows selection of) .ttf files, or truetype fonts. This matches the code below making that assumption.
+        string? result = await new FilesystemScreen(LSs.OverrideFont, LSs.OverrideFontLong, LSs.Ok, AppDomain.CurrentDomain.BaseDirectory + "Data", FilesystemScreen.Mode.SelectFile, null, this, null, "ttf");
         if (result == null) {
             return;
         }
