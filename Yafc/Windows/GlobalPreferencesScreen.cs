@@ -185,7 +185,8 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
     }
 
     private async void SelectFont() {
-        string? result = await new FilesystemScreen(LSs.OverrideFont, LSs.OverrideFontLong, LSs.Ok, null, FilesystemScreen.Mode.SelectFile, null, this, null, null);
+        // Use the YAFC/Data directory as the default folder because that is where YAFC has it's existing fonts as well as where it downloads additional ones.
+        string? result = await new FilesystemScreen(LSs.OverrideFont, LSs.OverrideFontLong, LSs.Ok, AppDomain.CurrentDomain.BaseDirectory + "Data", FilesystemScreen.Mode.SelectFile, null, this, null, null);
         if (result == null) {
             return;
         }
