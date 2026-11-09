@@ -45,7 +45,6 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
     private string? errorMessage;
     private string? tip;
     private readonly string[] tips;
-    private bool useMostRecentSave = true;
 
     private enum DefinesUpdateState {
         None,
@@ -187,26 +186,8 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
 
             gui.spacing = .5f;
 
-            using (gui.EnterRowWithHelpIcon(LSs.WelcomeLoadAutosaveHint, false)) {
-                if (gui.BuildCheckBox(LSs.WelcomeLoadAutosave, Preferences.Instance.useMostRecentSave,
-                        out useMostRecentSave)) {
-                    Preferences.Instance.useMostRecentSave = useMostRecentSave;
-                    Preferences.Instance.Save();
-                }
-            }
-
             using (gui.EnterRowWithHelpIcon(LSs.WelcomeUseNetProductionHint, false)) {
                 _ = gui.BuildCheckBox(LSs.WelcomeUseNetProduction, netProduction, out netProduction);
-            }
-
-            using (gui.EnterRowWithHelpIcon(LSs.WelcomeSoftwareRenderHint, false)) {
-                bool forceSoftwareRenderer = Preferences.Instance.forceSoftwareRenderer;
-                _ = gui.BuildCheckBox(LSs.WelcomeSoftwareRender, forceSoftwareRenderer, out forceSoftwareRenderer);
-
-                if (forceSoftwareRenderer != Preferences.Instance.forceSoftwareRenderer) {
-                    Preferences.Instance.forceSoftwareRenderer = forceSoftwareRenderer;
-                    Preferences.Instance.Save();
-                }
             }
 
             gui.spacing = 1.5f;
