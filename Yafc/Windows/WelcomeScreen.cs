@@ -373,7 +373,6 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
             // to disassemble ProjectDefinition and drag it piece by piece.
             var (dataPath, modsPath, projectPath) = (this.dataPath, this.modsPath, path);
             Preferences.Instance.AddProject(dataPath, modsPath, projectPath, expensive, netProduction);
-            Preferences.Instance.Save();
             tip = tips.Length > 0 ? tips[DataUtils.random.Next(tips.Length)] : "";
 
             loading = true;
