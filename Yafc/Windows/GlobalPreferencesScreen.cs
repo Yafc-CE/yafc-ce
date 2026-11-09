@@ -45,7 +45,7 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus
 {
     internal GlobalPreferencesScreen(Window parent) : base(ImGuiUtils.DefaultScreenPadding) {
         languageScroll = new ScrollArea(20f, LanguageSelection, collapsible: true);
-        Create(LSs.AboutYafc, 50, parent);
+        Create(LSs.GlobalPreferences, 50, parent);
         _ = InputSystem.Instance.SetDefaultKeyboardFocus(this);
     } 
     private readonly ScrollArea languageScroll;
