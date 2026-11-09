@@ -173,7 +173,7 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
                 }
                 gui.allocator = RectAllocator.RightRow;
                 string lang = Preferences.Instance.language;
-                if (GlobalPreferencesScreen.languageMapping.TryGetValue(Preferences.Instance.language, out LanguageInfo? mapped)) {
+                if (GlobalPreferencesScreen.LanguageMapping.TryGetValue(Preferences.Instance.language, out LanguageInfo? mapped)) {
                     lang = mapped.NativeName;
                 }
 

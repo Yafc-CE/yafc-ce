@@ -41,17 +41,11 @@ internal sealed record LanguageInfo(string LatinName, string NativeName, string 
     public string? CheckExtraCharacters { get; set; }
 }
 
-public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus
-{
-    internal GlobalPreferencesScreen(Window parent) : base(ImGuiUtils.DefaultScreenPadding) {
-        languageScroll = new ScrollArea(20f, LanguageSelection, collapsible: true);
-        Create(LSs.GlobalPreferences, 50, parent);
-        _ = InputSystem.Instance.SetDefaultKeyboardFocus(this);
-    } 
+public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
     private readonly ScrollArea languageScroll;
     internal static bool downloading;
 
-    internal static readonly SortedList<string, LanguageInfo> languageMapping = new()
+    internal static SortedList<string, LanguageInfo> LanguageMapping { get; } = new()
     {
         {"en", new("English")},
         {"af", new("Afrikaans")},
@@ -103,7 +97,11 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus
         {"zh-TW", new("Chinese (Traditional)", "漢語", "noto-sans-tc") { CheckExtraCharacters = "鈾礦" }},
     };
 
-    internal ScrollArea LanguageScroll => languageScroll;
+    internal GlobalPreferencesScreen(Window parent) : base(ImGuiUtils.DefaultScreenPadding) {
+        languageScroll = new ScrollArea(20f, LanguageSelection, collapsible: true);
+        Create(LSs.GlobalPreferences, 50, parent);
+        _ = InputSystem.Instance.SetDefaultKeyboardFocus(this);
+    }
 
     internal static void LanguageSelection(ImGui gui) {
         gui.spacing = 0f;
@@ -111,14 +109,14 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus
         gui.BuildText(LSs.WelcomeAlertEnglishFallback, TextBlockDisplayStyle.WrappedText);
         gui.AllocateSpacing(0.5f);
 
-        DoLanguageList(gui, languageMapping, true);
+        DoLanguageList(gui, LanguageMapping, true);
         if (!Program.hasOverriddenFont) {
             gui.AllocateSpacing(0.5f);
 
             gui.BuildText(LSs.WelcomeAlertNeedADifferentFont, TextBlockDisplayStyle.WrappedText);
             gui.AllocateSpacing(0.5f);
         }
-        DoLanguageList(gui, languageMapping, false);
+        DoLanguageList(gui, LanguageMapping, false);
     }
 
     private static void DoLanguageList(ImGui gui, SortedList<string, LanguageInfo> list, bool listFontSupported) {
@@ -220,7 +218,7 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus
                 gui.BuildText(LSs.WelcomeLanguageHeader);
                 //gui.allocator = RectAllocator.RightRow;
                 string lang = Preferences.Instance.language;
-                if (languageMapping.TryGetValue(Preferences.Instance.language, out LanguageInfo? mapped)) {
+                if (LanguageMapping.TryGetValue(Preferences.Instance.language, out LanguageInfo? mapped)) {
                     lang = mapped.NativeName;
                 }
 
