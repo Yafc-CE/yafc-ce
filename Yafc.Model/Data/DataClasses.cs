@@ -796,6 +796,10 @@ public class EntityCrafter : EntityWithModules {
     /// </summary>
     /// <remarks><see cref="int.MaxValue"/> indicates a weight-limited rocket silo in 2.1.</remarks>
     internal int rocketInventorySize;
+    /// <summary>
+    /// The width in tiles of an agricultural tower's field, which nothing else can use. It's 0 for other crafters.
+    /// </summary>
+    internal int agriculturalFieldWidth;
 
     public virtual float baseCraftingSpeed {
         // The speed of a lab is baseSpeed * (1 + researchSpeedBonus) * Math.Min(0.2, 1 + moduleAndBeaconSpeedBonus)

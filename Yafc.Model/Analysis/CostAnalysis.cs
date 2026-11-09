@@ -141,11 +141,10 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             float craftingTime = recipe.time;
             EntityCrafter[] crafters = GetCraftersForCost(recipe, out bool noneUnlocked);
 
-            if (recipe is Mechanics) {
-                // Special recipes, such as mining, pumping and generating, assume speed 1. So their size, energy and pollution are each
-                // the lowest among their buildings, chosen separately. Taking them from the fastest building would charge for its size
-                // without the benefit of its speed. Mining keeps speed 1 on purpose, since its density penalty was calibrated at speed 1.
-                // The other special recipes are planned to use real speed, see #751.
+            if (recipe.flags.HasFlags(RecipeFlags.UsesMiningProductivity)) {
+                // Mining assumes speed 1, since its density penalty was calibrated at speed 1. So its size, energy and pollution are
+                // each the lowest among the drills, chosen separately. Taking them from the fastest drill would charge for its size
+                // without the benefit of its speed.
                 bool fuelsDiffer = false;
 
                 foreach (var crafter in crafters) {
@@ -184,7 +183,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             }
             else if (ChooseCrafter(recipe, crafters, noneUnlocked) is (EntityCrafter crafter, float speed, float energy)) {
                 // Other recipes are priced with one building, using its speed, size, energy and pollution together.
-                buildingSize = crafter.size;
+                buildingSize = crafter.factorioType == "agricultural-tower" ? crafter.agriculturalFieldWidth : crafter.size;
                 energyPerCraft = energy;
 
                 if (speed > 0f) {

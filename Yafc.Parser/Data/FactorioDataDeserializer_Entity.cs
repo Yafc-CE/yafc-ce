@@ -230,6 +230,8 @@ internal partial class FactorioDataDeserializer {
                 agriculturalTower.basePower = ParseEnergy(usesPower);
                 float radius = table.Get("radius", 1f);
                 agriculturalTower.baseCraftingSpeed = (float)(Math.Pow(2 * radius + 1, 2) - 1);
+                int plotWidth = table.Get("growth_grid_tile_size", 3);
+                agriculturalTower.agriculturalFieldWidth = (int)((2 * radius + 1) * plotWidth);
                 agriculturalTower.itemInputs = 1;
                 recipeCrafters.Add(agriculturalTower, SpecialNames.PlantRecipe);
                 break;
