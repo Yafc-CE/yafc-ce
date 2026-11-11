@@ -121,6 +121,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
         var recipeProductionCost = Database.recipesAndTechnologies.CreateMapping<float>();
         recipeCost = Database.recipes.CreateMapping<float>();
         flow = Database.objects.CreateMapping<float>();
+        var recipeFuel = Database.recipes.CreateMapping<(Goods? fuel, float amount)>();
         var lastVariable = Database.goods.CreateMapping<Variable>();
 
         foreach (Recipe recipe in Database.recipes.all.ExceptExcluded(this)) {
@@ -258,6 +259,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             if (singleUsedFuel != null) {
                 var var = variables[singleUsedFuel];
                 constraint.SetCoefficientCheck(var, -singleUsedFuelAmount, ref lastVariable[singleUsedFuel]);
+                recipeFuel[recipe] = (singleUsedFuel, singleUsedFuelAmount);
             }
 
             foreach (var ingredient in recipe.ingredients) {
@@ -382,6 +384,11 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 foreach (var ingredient in recipe.ingredients) // TODO split
 {
                     export[o] += export[ingredient.goods] * ingredient.amount;
+                }
+
+                // The solver treats the single fuel of the recipe's buildings as an ingredient, so the recipe's cost includes it too.
+                if (recipe is Recipe r && recipeFuel[r] is (Goods fuel, float fuelAmount)) {
+                    export[o] += export[fuel] * fuelAmount;
                 }
 
                 foreach (var product in recipe.products) {
