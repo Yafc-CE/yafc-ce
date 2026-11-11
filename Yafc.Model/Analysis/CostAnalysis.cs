@@ -409,6 +409,11 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                     continue;
                 }
 
+                // A recipe the solution uses is never wasteful. Computing its waste in floats can leave a small positive rounding error.
+                if (flow[recipe] > 0f) {
+                    continue;
+                }
+
                 float productCost = 0f;
 
                 foreach (var product in recipe.products) {
