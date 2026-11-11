@@ -89,7 +89,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
             _ = page.SolvePage();
         }
 
-        SetActivePage(project.FindPage(project.displayPages[0]));
+        SetActivePage(project.displayPages.Count > 0 ? project.FindPage(project.displayPages[0]) : null);
         project.metaInfoChanged += ProjectOnMetaInfoChanged;
         project.settings.changed += ProjectSettingsChanged;
         project.saveStateChanged += ProjectSaveStateChanged;
