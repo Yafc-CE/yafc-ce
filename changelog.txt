@@ -39,6 +39,8 @@ Date:
         - Cost analysis: recipes whose buildings burn a single fuel no longer pay for their energy twice, once through the fuel and once as a flat energy cost.
         - GUI: Deleting the last character in TextInput no longer has a delay.
         - Fix a crash when loading a project that has no pages, or only hidden pages.
+        - Never Enough Items: recipes that cost analysis uses are no longer sometimes listed below recipes it does not use.
+        - Cost analysis: the cost of a recipe whose buildings burn a single fuel now includes that fuel, so its cost and waste are no longer too low.
     Internal changes:
         - Enable diagnostic "CA1061 Do not hide base class methods" as error
         - Enable diagnostic "IDE0052 Remove unread private members" as warning

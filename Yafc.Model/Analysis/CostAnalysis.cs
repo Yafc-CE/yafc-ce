@@ -121,6 +121,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
         var recipeProductionCost = Database.recipesAndTechnologies.CreateMapping<float>();
         recipeCost = Database.recipes.CreateMapping<float>();
         flow = Database.objects.CreateMapping<float>();
+        var recipeFuel = Database.recipes.CreateMapping<(Goods? fuel, float amount)>();
         var lastVariable = Database.goods.CreateMapping<Variable>();
 
         foreach (Recipe recipe in Database.recipes.all.ExceptExcluded(this)) {
@@ -258,6 +259,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             if (singleUsedFuel != null) {
                 var var = variables[singleUsedFuel];
                 constraint.SetCoefficientCheck(var, -singleUsedFuelAmount, ref lastVariable[singleUsedFuel]);
+                recipeFuel[recipe] = (singleUsedFuel, singleUsedFuelAmount);
             }
 
             foreach (var ingredient in recipe.ingredients) {
@@ -384,6 +386,11 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                     export[o] += export[ingredient.goods] * ingredient.amount;
                 }
 
+                // The solver treats the single fuel of the recipe's buildings as an ingredient, so the recipe's cost includes it too.
+                if (recipe is Recipe r && recipeFuel[r] is (Goods fuel, float fuelAmount)) {
+                    export[o] += export[fuel] * fuelAmount;
+                }
+
                 foreach (var product in recipe.products) {
                     recipeProductionCost[recipe] += product.amount * export[product.goods];
                 }
@@ -406,6 +413,11 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
         if (result is Solver.ResultStatus.OPTIMAL or Solver.ResultStatus.FEASIBLE) {
             foreach (var (recipe, constraint) in constraints) {
                 if (constraint == null) {
+                    continue;
+                }
+
+                // A recipe the solution uses is never wasteful. Computing its waste in floats can leave a small positive rounding error.
+                if (flow[recipe] > 0f) {
                     continue;
                 }
 
