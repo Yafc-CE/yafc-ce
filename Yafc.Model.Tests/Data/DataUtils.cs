@@ -3,6 +3,8 @@ using Xunit;
 
 namespace Yafc.Model.Data.Tests;
 
+// Sets Project.current, so it must not run in parallel with the other tests that set it.
+[Collection("LuaDependentTests")]
 public class DataUtilsTests {
     public DataUtilsTests() => Project.current = new();
 
