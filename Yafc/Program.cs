@@ -32,32 +32,6 @@ public static class Program {
         // This must happen before Preferences.Instance, where we load the prefs file and the requested translation.
         FactorioDataSource.LoadYafcLocale("en");
 
-        string? overrideFont = Preferences.Instance.overrideFont;
-        FontFile? overriddenFontFile = null;
-
-        try {
-            if (!string.IsNullOrEmpty(overrideFont) && File.Exists(overrideFont)) {
-                overriddenFontFile = new FontFile(overrideFont);
-            }
-        }
-        catch (Exception ex) {
-            Console.Error.WriteException(ex);
-        }
-
-        string baseFileName = "Roboto";
-        if (GlobalPreferencesScreen.LanguageMapping.TryGetValue(Preferences.Instance.language, out LanguageInfo? language)) {
-            if (Font.FilesExist(language.BaseFontName)) {
-                baseFileName = language.BaseFontName;
-            }
-        }
-
-        hasOverriddenFont = overriddenFontFile != null;
-        Font.header = new Font(overriddenFontFile ?? new FontFile($"Data/{baseFileName}-Light.ttf"), 2f);
-        var regular = overriddenFontFile ?? new FontFile($"Data/{baseFileName}-Regular.ttf");
-        Font.subheader = new Font(regular, 1.5f);
-        Font.productionTableHeader = new Font(regular, 1.23f);
-        Font.text = new Font(regular, 1f);
-
         ProjectDefinition? cliProject = CommandLineParser.ParseArgs(args);
 
         if (CommandLineParser.errorOccured || CommandLineParser.helpRequested) {
