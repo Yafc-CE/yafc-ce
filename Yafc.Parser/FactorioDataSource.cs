@@ -127,13 +127,12 @@ public static partial class FactorioDataSource {
     }
 
     public static void LoadYafcLocale(string locale) {
-        try {
+        if (Directory.Exists("Data/locale/" + locale + "/")) { /* Check that a Yafc translation exists for this locale */
             foreach (string localeName in Directory.EnumerateFiles("Data/locale/" + locale + "/")) {
                 using Stream stream = File.Open(localeName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 FactorioLocalization.Parse(stream);
             }
         }
-        catch (DirectoryNotFoundException) { /* No Yafc translation for this locale */ }
     }
 
     /// <summary>
