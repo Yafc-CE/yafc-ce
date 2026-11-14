@@ -1,12 +1,14 @@
 ﻿using System.Numerics;
+using SDL2;
 using Yafc.I18n;
 using Yafc.Model;
 using Yafc.UI;
 
 namespace Yafc;
 
-public class MilestonesWidget : VirtualScrollList<FactorioObject> {
-    public MilestonesWidget() : base(30f, new Vector2(3f, 3f), MilestoneDrawer) => data = Project.current.settings.milestones;
+public class MilestonesWidget : SearchableList<FactorioObject> {
+    public MilestonesWidget() : base(30f, new Vector2(3f, 3f), MilestoneDrawer, (element, query) => element.Match(query))
+        => data = Project.current.settings.milestones;
 
     private static void MilestoneDrawer(ImGui gui, FactorioObject element, int index) {
         var settings = Project.current.settings;
@@ -34,15 +36,14 @@ public class MilestonesWidget : VirtualScrollList<FactorioObject> {
 }
 
 public class MilestonesPanel : PseudoScreen {
-    private static MilestonesWidget? instance;
     private readonly MilestonesWidget milestonesWidget = new();
 
     public override void Build(ImGui gui) {
-        instance = milestonesWidget;
         gui.spacing = 1f;
         BuildHeader(gui, LSs.Milestones);
         gui.BuildText(LSs.MilestonesHeader);
         gui.AllocateSpacing(2f);
+        milestonesWidget.BuildSearchBox(gui);
         milestonesWidget.Build(gui);
         gui.AllocateSpacing(2f);
         gui.BuildText(LSs.MilestonesDescription, TextBlockDisplayStyle.WrappedText);
@@ -64,5 +65,8 @@ public class MilestonesPanel : PseudoScreen {
 
     protected override void ReturnPressed() => Close();
 
-    internal static new void Rebuild() => instance?.RebuildContents();
+    public override bool KeyDown(SDL.SDL_Keysym key) {
+        milestonesWidget.FocusSearchBox();
+        return base.KeyDown(key);
+    }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Numerics;
+using SDL2;
 using Yafc.I18n;
 using Yafc.Model;
 using Yafc.UI;
@@ -7,26 +8,20 @@ using Yafc.UI;
 namespace Yafc;
 
 public class MilestonesEditor : PseudoScreen {
-    private static readonly MilestonesEditor Instance = new MilestonesEditor();
-    private readonly VirtualScrollList<FactorioObject> milestoneList;
+    private readonly SearchableList<FactorioObject> milestoneList;
 
-    public MilestonesEditor() : base(50) {
-        milestoneList = new VirtualScrollList<FactorioObject>(30f, new Vector2(float.PositiveInfinity, 3f), MilestoneDrawer);
-        cleanupCallback = () => {
-            // Force rebuild the panel to update its contents and show the possibly-modified milestones.
-            MilestonesPanel.Rebuild();
+    private MilestonesEditor() : base(50) {
+        milestoneList = new SearchableList<FactorioObject>(30f, new Vector2(float.PositiveInfinity, 3f), MilestoneDrawer,
+            (element, query) => element.Match(query)) {
 
-            // Recalculate the project with the  possibly-modified milestones.
-            Milestones.Instance.Compute(Project.current, new());
+            data = Project.current.settings.milestones
         };
+
+        // Recalculate the project with the possibly-modified milestones.
+        cleanupCallback = () => Milestones.Instance.Compute(Project.current, new());
     }
 
-    public override void Open() {
-        base.Open();
-        milestoneList.data = Project.current.settings.milestones;
-    }
-
-    public static void Show() => MainScreen.Instance.ShowPseudoScreen(Instance);
+    public static void Show() => MainScreen.Instance.ShowPseudoScreen(new MilestonesEditor());
 
     private void MilestoneDrawer(ImGui gui, FactorioObject element, int index) {
         using (gui.EnterRow()) {
@@ -36,16 +31,24 @@ public class MilestonesEditor : PseudoScreen {
             if (gui.BuildButton(Icon.Close, size: 1f)) {
                 _ = settings.RecordUndo().milestones.Remove(element);
                 Rebuild();
-                milestoneList.data = settings.milestones;
             }
         }
-        if (gui.DoListReordering(gui.lastRect, gui.lastRect, index, out int moveFrom)) {
+
+        // Only reorder the full list: in a filtered list, the index is not the position in the milestones, and a move would
+        // also shift the hidden milestones in between.
+        if (milestoneList.filter.empty && gui.DoListReordering(gui.lastRect, gui.lastRect, index, out int moveFrom)) {
             Project.current.settings.RecordUndo().milestones.MoveListElementIndex(moveFrom, index);
         }
     }
 
+    public override bool KeyDown(SDL.SDL_Keysym key) {
+        milestoneList.FocusSearchBox();
+        return base.KeyDown(key);
+    }
+
     public override void Build(ImGui gui) {
         BuildHeader(gui, LSs.MilestoneEditor);
+        milestoneList.BuildSearchBox(gui);
         milestoneList.Build(gui);
 
         gui.BuildText(LSs.MilestoneDescription, TextBlockDisplayStyle.WrappedText with { Color = SchemeColor.BackgroundTextFaint });
@@ -100,7 +103,11 @@ public class MilestonesEditor : PseudoScreen {
             settings.RecordUndo().milestones.Insert(bestIndex, obj);
         }
 
+        // Do not hide the new milestone, or it looks like adding it failed.
+        if (!obj.Match(milestoneList.filter)) {
+            milestoneList.filter = default;
+        }
+
         Rebuild();
-        milestoneList.data = settings.milestones;
     }
 }
