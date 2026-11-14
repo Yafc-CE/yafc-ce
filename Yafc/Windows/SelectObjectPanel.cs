@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Numerics;
 using SDL2;
-using Yafc.I18n;
 using Yafc.Model;
 using Yafc.UI;
 
@@ -17,7 +16,6 @@ namespace Yafc;
 public abstract class SelectObjectPanel<TResult, TDisplay> : PseudoScreenWithResult<TResult?> where TDisplay : FactorioObject {
     private readonly SearchableList<TDisplay?> list;
     private string? header;
-    private Rect searchBox;
     private string? noneTooltip;
     protected QualitySelectOptions<TDisplay>? options { get; private set; }
 
@@ -122,17 +120,12 @@ public abstract class SelectObjectPanel<TResult, TDisplay> : PseudoScreenWithRes
             gui.AllocateSpacing();
         }
 
-        string filterText = list.filter.query;
-        if (gui.BuildSearchBox(filterText, out string newFilterText, LSs.TypeForSearchHint, setKeyboardFocus: SetKeyboardFocus.OnFirstPanelDraw)) {
-            list.filter = new SearchQuery(newFilterText);
-        }
-
-        searchBox = gui.lastRect;
+        list.BuildSearchBox(gui);
         list.Build(gui);
     }
 
     public override bool KeyDown(SDL.SDL_Keysym key) {
-        contents.SetTextInputFocus(searchBox, list.filter.query);
+        list.FocusSearchBox();
         return base.KeyDown(key);
     }
 }

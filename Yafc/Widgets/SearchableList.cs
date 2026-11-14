@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
+using Yafc.I18n;
 using Yafc.Model;
 using Yafc.UI;
 
@@ -13,6 +14,8 @@ public class SearchableList<TData>(float height, Vector2 elementSize, VirtualScr
     private readonly Filter filterFunc = filter;
     // The contents of data at the last refresh, to notice when the source list is modified in place.
     private TData[] dataSnapshot = [];
+    private ImGui? searchBoxGui;
+    private Rect searchBoxRect;
 
     public new IReadOnlyList<TData> data {
         get;
@@ -43,6 +46,24 @@ public class SearchableList<TData>(float height, Vector2 elementSize, VirtualScr
         }
         base.BuildContents(gui);
     }
+
+    /// <summary>
+    /// Builds a search box that filters this list. It gets the keyboard focus when the panel is first drawn.
+    /// Call <see cref="FocusSearchBox"/> from the panel's KeyDown to send typing to it after it lost the focus.
+    /// </summary>
+    public void BuildSearchBox(ImGui gui) {
+        if (gui.BuildSearchBox(filter.query, out string newFilterText, LSs.TypeForSearchHint, setKeyboardFocus: SetKeyboardFocus.OnFirstPanelDraw)) {
+            filter = new SearchQuery(newFilterText);
+        }
+
+        searchBoxGui = gui;
+        searchBoxRect = gui.lastRect;
+    }
+
+    /// <summary>
+    /// Moves the keyboard focus to the search box built by <see cref="BuildSearchBox"/>, if it does not have it already.
+    /// </summary>
+    public void FocusSearchBox() => searchBoxGui?.SetTextInputFocus(searchBoxRect, filter.query);
 
     private void RefreshDataIfSourceChanged() {
         if (data.Count != dataSnapshot.Length) {
