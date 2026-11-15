@@ -30,6 +30,10 @@ public class Font(FontFile file, float size) {
     /// any characters do not have a glyph.
     /// </summary>
     public bool CanDraw(string value) {
+        // Make sure lastFontSize is set before continuing.
+        if (lastFontSize == null) {
+            GetFontSize(size);
+        }
         nint handle = lastFontSize!.handle;
         foreach (char ch in value) {
             if (SDL_ttf.TTF_GlyphIsProvided(handle, ch) == 0) {
