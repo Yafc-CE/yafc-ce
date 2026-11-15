@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using SDL2;
 using Serilog;
 using Yafc.Core;
@@ -38,7 +32,6 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
     private bool canCreate;
     private readonly ScrollArea errorScroll;
     private readonly ScrollArea recentProjectScroll;
-    private readonly ScrollArea languageScroll;
     private string? errorMod;
     private const string DefinesUpdateCommand = "/command helpers.write_file(\"Defines2.1.lua\", \"return \" .. serpent.line(defines), false)";
     private DefinesUpdateState definesUpdateState;
@@ -63,7 +56,6 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
         RenderingUtils.SetColorScheme(Preferences.Instance.darkMode);
 
         recentProjectScroll = new ScrollArea(20f, BuildRecentProjectList, collapsible: true);
-        languageScroll = new ScrollArea(20f, GlobalPreferencesScreen.LanguageSelection, collapsible: true);
         errorScroll = new ScrollArea(20f, BuildRedErrorPanel, collapsible: true);
         Create(LSs.Welcome.L(YafcLib.version.ToString(3)), 45, null);
 
@@ -178,7 +170,7 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
                 }
 
                 if (gui.BuildLink(lang)) {
-                    gui.ShowDropDown(languageScroll.Build);
+                    gui.ShowDropDown(GlobalPreferencesScreen.languageScroll.Build);
                 }
 
                 gui.BuildText(LSs.WelcomeLanguageHeader);

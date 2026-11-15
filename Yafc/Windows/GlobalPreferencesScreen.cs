@@ -33,7 +33,7 @@ internal sealed record LanguageInfo(string LatinName, string NativeName, string 
 }
 
 public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
-    private readonly ScrollArea languageScroll;
+    internal static readonly ScrollArea languageScroll = new ScrollArea(20f, LanguageSelection, collapsible: true);
     internal static bool downloading;
 
     internal static SortedList<string, LanguageInfo> LanguageMapping { get; } = new()
@@ -89,7 +89,6 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
     };
 
     internal GlobalPreferencesScreen(Window parent) : base(ImGuiUtils.DefaultScreenPadding) {
-        languageScroll = new ScrollArea(20f, LanguageSelection, collapsible: true);
         Create(LSs.GlobalPreferences, 50, parent);
         _ = InputSystem.Instance.SetDefaultKeyboardFocus(this);
     }
