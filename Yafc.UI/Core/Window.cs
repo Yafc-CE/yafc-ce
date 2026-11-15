@@ -42,7 +42,16 @@ public abstract class Window : IDisposable {
 
     public event OnFocusLost? onFocusLost;
 
-    public Window? ChildWindow { get; set; }
+    public Window? ChildWindow {
+        get;
+        set {
+            // Because there can only be a single child window, always close the previous one if it's still open first.
+            if (value != null) {
+                field?.Close();
+            }
+            field = value;
+        }
+    }
 
     internal void Create() {
         if (surface is null) {
