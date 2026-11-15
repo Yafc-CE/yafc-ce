@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO.Compression;
 using System.Net.Http;
-using System.Reflection;
 using Newtonsoft.Json.Linq;
 using SDL2;
 using Yafc.I18n;
@@ -125,7 +123,7 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
                         Preferences.Instance.language = k;
                         Preferences.Instance.Save();
                         gui.CloseDropdown();
-                        restartIfNecessary();
+                        Program.SetFont();
                     }
                     else {
                         gui.ShowDropDown(async gui => {
@@ -162,7 +160,8 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
                                 // Save and restart
                                 Preferences.Instance.language = k;
                                 Preferences.Instance.Save();
-                                restartIfNecessary();
+                                Program.SetFont();
+                                downloading = false;
                             }
                         });
                     }
@@ -172,13 +171,7 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
                 Preferences.Instance.language = k;
                 Preferences.Instance.Save();
                 _ = gui.CloseDropdown();
-            }
-        }
-
-        static void restartIfNecessary() {
-            if (!Program.hasOverriddenFont) {
-                Process.Start("dotnet", Assembly.GetEntryAssembly()!.Location);
-                Environment.Exit(0);
+                //restartIfNecessary(); //TODO: This is the one case where a restart might be required! (If opened from the main window...)
             }
         }
     }
@@ -192,10 +185,15 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
         }
 
         if (SDL_ttf.TTF_OpenFont(result, 16) != IntPtr.Zero) {
-            Preferences.Instance.overrideFont = result;
-            languageScroll.RebuildContents();
-            Preferences.Instance.Save();
+            ApplyFont(result);
         }
+    }
+
+    private static void ApplyFont(string? result) {
+        Preferences.Instance.overrideFont = result;
+        languageScroll.RebuildContents();
+        Preferences.Instance.Save();
+        Program.SetFont();
     }
 
     protected override void BuildContents(ImGui gui) {
@@ -227,12 +225,9 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
             if (Preferences.Instance.overrideFont != null) {
                 gui.BuildText(Preferences.Instance.overrideFont, TextBlockDisplayStyle.WrappedText);
                 if (gui.BuildLink(LSs.WelcomeResetFont)) {
-                    Preferences.Instance.overrideFont = null;
-                    languageScroll.RebuildContents();
-                    Preferences.Instance.Save();
+                    ApplyFont(null);
                 }
             }
-            gui.BuildText(LSs.WelcomeResetFontRestart, TextBlockDisplayStyle.WrappedText);
             gui.AllocateSpacing(0.5f);
 
             gui.spacing = .5f;
