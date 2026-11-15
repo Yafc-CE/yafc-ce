@@ -15,7 +15,7 @@ public static class CommandLineParser {
     public static string lastError { get; private set; } = string.Empty;
     public static bool helpRequested { get; private set; }
 
-    public static bool errorOccured => !string.IsNullOrEmpty(lastError);
+    public static bool errorOccurred => !string.IsNullOrEmpty(lastError);
 
     public static ProjectDefinition? ParseArgs(string[] args) {
         ProjectDefinition projectDefinition = new ProjectDefinition();

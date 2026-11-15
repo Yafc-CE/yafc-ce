@@ -36,11 +36,11 @@ public static class Program {
 
         ProjectDefinition? cliProject = CommandLineParser.ParseArgs(args);
 
-        if (CommandLineParser.errorOccured || CommandLineParser.helpRequested) {
+        if (CommandLineParser.errorOccurred || CommandLineParser.helpRequested) {
             Console.WriteLine(LSs.YafcWithVersion.L(YafcLib.version.ToString(3)));
             Console.WriteLine();
 
-            if (CommandLineParser.errorOccured) {
+            if (CommandLineParser.errorOccurred) {
                 Console.WriteLine(LSs.CommandLineError.L(CommandLineParser.lastError));
                 Console.WriteLine();
                 Environment.ExitCode = 1;
