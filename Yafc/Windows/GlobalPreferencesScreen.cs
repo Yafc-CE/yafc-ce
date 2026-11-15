@@ -79,14 +79,14 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
                 }
             }
 
+            // If the player can reach the option from the Main Menu, they should not need to change this option to begin with.
             using (gui.EnterRowWithHelpIcon(LSs.WelcomeSoftwareRenderHint, false)) {
                 bool forceSoftwareRenderer = Preferences.Instance.forceSoftwareRenderer;
-                _ = gui.BuildCheckBox(LSs.WelcomeSoftwareRender, forceSoftwareRenderer, out forceSoftwareRenderer);
-
-                if (forceSoftwareRenderer != Preferences.Instance.forceSoftwareRenderer) {
-                    Preferences.Instance.forceSoftwareRenderer = forceSoftwareRenderer;
-                    Preferences.Instance.Save();
-                }
+                // Treat this as "disabled" if opened from the Main Screen, as changing it would have no effect until a restart.
+                //  Additionally disabling it could make the Main Screen unusable / crash for some users.
+                _ = gui.BuildCheckBox(LSs.WelcomeSoftwareRender, forceSoftwareRenderer, out forceSoftwareRenderer, (parent is MainScreen) ? SchemeColor.Grey : SchemeColor.None, RectAllocator.LeftRow, null, (parent is not MainScreen));
+                Preferences.Instance.forceSoftwareRenderer = forceSoftwareRenderer;
+                Preferences.Instance.Save();
             }
 
             if (gui.BuildCheckBox(LSs.PrefsAutosave, Preferences.Instance.autosaveEnabled, out bool autosaveEnabled)) {

@@ -8,7 +8,7 @@ namespace Yafc.UI;
 // Utility window is not hardware-accelerated and auto-size (and not resizable)
 public abstract class WindowUtility(Padding padding) : Window(padding) {
     private int windowWidth, windowHeight;
-    private Window? parent;
+    protected Window? parent;
 
     protected void Create(string? title, float width, Window? parent) {
         if (visible) {
@@ -16,9 +16,7 @@ public abstract class WindowUtility(Padding padding) : Window(padding) {
         }
 
         this.parent = parent;
-        if (parent != null) {
-            parent.ChildWindow = this;
-        }
+        parent?.ChildWindow = this;
 
         contentSize = new Vector2(width, 0);
         // Perform initial layout to dynamically calculate necessary window height.
