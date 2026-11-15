@@ -128,7 +128,7 @@ public class FilesystemScreen : TaskWindow<string?>, IKeyboardFocus {
                 selectedResult = null;
             }
             else {
-                if (!selectedFileName.EndsWith("." + extension, StringComparison.OrdinalIgnoreCase)) {
+                if (extension != null && !selectedFileName.EndsWith("." + extension, StringComparison.OrdinalIgnoreCase)) {
                     selectedFileName += "." + extension;
                 }
 
