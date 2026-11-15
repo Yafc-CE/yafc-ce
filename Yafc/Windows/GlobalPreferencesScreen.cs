@@ -91,10 +91,12 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
 
             if (gui.BuildCheckBox(LSs.PrefsAutosave, Preferences.Instance.autosaveEnabled, out bool autosaveEnabled)) {
                 Preferences.Instance.autosaveEnabled = autosaveEnabled;
+                Preferences.Instance.Save();
             }
 
             if (gui.BuildCheckBox(LSs.PrefsExportEntitiesWithFuelFilterSet, Preferences.Instance.exportEntitiesWithFuelFilter, out bool exportEntitiesWithFuelFilter)) {
                 Preferences.Instance.exportEntitiesWithFuelFilter = exportEntitiesWithFuelFilter;
+                Preferences.Instance.Save();
             }
 
             gui.spacing = 1.5f;
