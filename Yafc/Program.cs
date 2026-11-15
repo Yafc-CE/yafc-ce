@@ -68,7 +68,7 @@ public static class Program {
         }
 
         string baseFileName = "Roboto";
-        if (GlobalPreferencesScreen.LanguageMapping.TryGetValue(Preferences.Instance.language, out LanguageInfo? language)) {
+        if (Language.LanguageMapping.TryGetValue(Preferences.Instance.language, out LanguageInfo? language)) {
             if (Font.FilesExist(language.BaseFontName)) {
                 baseFileName = language.BaseFontName;
             }

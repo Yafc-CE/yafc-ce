@@ -90,7 +90,7 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
             gui.BuildText(tip, new TextBlockDisplayStyle(WrapText: true, Alignment: RectAlignment.Middle));
             gui.SetNextRebuild(Ui.time + 30);
         }
-        else if (GlobalPreferencesScreen.downloading) {
+        else if (Language.downloading) {
             gui.BuildText(LSs.PleaseWait, TextBlockDisplayStyle.Centered);
             gui.BuildText(LSs.DownloadingFonts, TextBlockDisplayStyle.Centered);
         }
@@ -165,12 +165,12 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
                 }
                 gui.allocator = RectAllocator.RightRow;
                 string lang = Preferences.Instance.language;
-                if (GlobalPreferencesScreen.LanguageMapping.TryGetValue(Preferences.Instance.language, out LanguageInfo? mapped)) {
+                if (Language.LanguageMapping.TryGetValue(Preferences.Instance.language, out LanguageInfo? mapped)) {
                     lang = mapped.NativeName;
                 }
 
                 if (gui.BuildLink(lang)) {
-                    gui.ShowDropDown(GlobalPreferencesScreen.languageScroll.Build);
+                    gui.ShowDropDown(Language.languageScroll.Build);
                 }
 
                 gui.BuildText(LSs.WelcomeLanguageHeader);
