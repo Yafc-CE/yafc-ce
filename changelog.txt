@@ -29,7 +29,8 @@ Date:
         - Added Global Preferences, a new screen with all the non-project-specific preferences. This can be accessed from 
             both the Welcome Screen and main menu. 
         - The Preferences screen now shows *only* project specific settings, and is renamed to Project Preferences.
-        - Added Global Preferences, a new screen with all the non-project-specific preferences. This can be accessed from both the Welcome Screen and main menu.
+        - Updated the Font selection to no longer require a restart.
+        - Updated the font selection to now only show .ttf and .oft files.
     Fixes:
         - Cost analysis: mining recipes in Factorio 2.0 were always penalized as if the resource was extremely rare. Mined resources are now considerably cheaper.
         - Honor mod-list.json version selections regardless of mod discovery order, preventing incompatible mod versions from being mixed.
@@ -41,12 +42,15 @@ Date:
         - Resources added to data.script_enabled can be mined again when Yafc does not know where they spawn, such as the Space Exploration resources.
         - Cost analysis: a recipe's size, energy and pollution no longer depend on the order of its buildings' names. They now come from the buildings unlocked at the current milestones, without the character or Pyanodon TURD variant buildings.
         - Cost analysis: recipes whose buildings burn a single fuel no longer pay for their energy twice, once through the fuel and once as a flat energy cost.
+        - Fixed an exception in some cases when selecting a custom font.
+        - Fixed an exception in some cases when selecting a different language.
     Internal changes:
         - Enable diagnostic "CA1061 Do not hide base class methods" as error
         - Enable diagnostic "IDE0052 Remove unread private members" as warning
         - Check IDE0052 in the CI format step, so unread private members fail the build check.
         - Ignore .vscode/launch.json, as launch configurations contain personal paths and settings.
         - Document the distinction between project settings and preferences.
+        - LoadYafcLocale no longer uses exceptions to check if the locale exists, simplifying debugging.
 ----------------------------------------------------------------------------------------------------------------------
 Version: 2.21.0
 Date: 25 October 2026
