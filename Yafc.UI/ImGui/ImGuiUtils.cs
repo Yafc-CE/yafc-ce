@@ -259,7 +259,7 @@ public static class ImGuiUtils {
     }
 
     public static bool BuildCheckBox(this ImGui gui, string text, bool value, out bool newValue, SchemeColor color = SchemeColor.None,
-        RectAllocator allocator = RectAllocator.LeftRow, string? tooltip = null) {
+        RectAllocator allocator = RectAllocator.LeftRow, string? tooltip = null, bool enabled = true) {
 
         using (gui.EnterRow(allocator: allocator)) {
             gui.BuildIcon(value ? Icon.CheckBoxCheck : Icon.CheckBoxEmpty, 1.5f, color);
@@ -273,7 +273,7 @@ public static class ImGuiUtils {
             }
         }
 
-        if (gui.enableDrawing && gui.OnClick(gui.lastRect)) {
+        if (enabled && gui.enableDrawing && gui.OnClick(gui.lastRect)) {
             newValue = !value;
             return true;
         }
