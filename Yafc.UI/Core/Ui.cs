@@ -286,4 +286,10 @@ public static partial class Ui {
             window.DarkModeChanged();
         }
     }
+
+    public static void UpdateWindowSizes() {
+        foreach (Window window in windows.Values) {
+            window.UpdateSize();
+        }
+    }
 }
