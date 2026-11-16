@@ -23,6 +23,18 @@ internal static class LuaDependentTestHelper {
     }
 
     /// <summary>
+    /// Creates a <see cref="LuaContext"/> that has run Defines.lua, Sandbox.lua and Serpent.lua, like the data stage before the first mod.
+    /// </summary>
+    internal static LuaContext CreateSandboxedContext() {
+        LuaContext context = new(new(2, 0, 7));
+        byte[] defines = File.ReadAllBytes("Data/Defines2.0.lua");
+        byte[] sandbox = File.ReadAllBytes("Data/Sandbox.lua");
+        context.Exec(sandbox, "*", "", context.Exec(defines, "*", ""));
+
+        return context;
+    }
+
+    /// <summary>
     /// Runs Sandbox.lua, Serpent.lua, Defines.lua, and a lua file appropriate to the calling test. Returns a <see cref="Project"/> based on those files.
     /// The appropriate lua file is an embedded resource after the calling method, class, and namespace, or the calling class and namespace.
     /// e.g. <c>Yafc.Model.Tests.TestClass.TestMethod1.lua</c> or <c>Yafc.Model.Tests.TestClass.lua</c>.
@@ -63,10 +75,8 @@ internal static class LuaDependentTestHelper {
         // Read the four lua files and generate an empty project.
         Project project;
         Helper helper = new();
-        using (LuaContext context = new LuaContext(new(2, 0, 7))) {
-            byte[] defines = File.ReadAllBytes("Data/Defines2.0.lua");
-            byte[] bytes = File.ReadAllBytes("Data/Sandbox.lua");
-            context.Exec(bytes, "*", "", context.Exec(defines, "*", ""));
+        using (LuaContext context = CreateSandboxedContext()) {
+            byte[] bytes;
 
             using (Stream stream = GetStream(targetStreamName, out string alternate)) {
                 if (stream == null) {
