@@ -22,10 +22,6 @@ end
 loadstring = load;
 shims[load] = raw_load;
 
--- Factorio's package only holds the loaded table. The full library can load native code with package.loadlib,
--- and its loaded table still holds io and os.
-package = {loaded = {}};
-
 -- Only debug.getinfo() and debug.traceback() are available in Factorio.
 debug = {getinfo = debug.getinfo, traceback = debug.traceback};
 
@@ -42,6 +38,11 @@ end
 
 require("__core__/lualib/dataloader.lua")
 serpent = require("Serpent")
+
+-- Factorio's package only holds the loaded table, which require fills with "__mod__/path.lua" keys.
+-- The full library can load native code with package.loadlib, and its loaded table still holds io and os.
+-- This comes after requiring the dataloader, which Factorio runs without require.
+package = {loaded = {}};
 
 local raw_log = _G.raw_log;
 _G.raw_log = nil;
