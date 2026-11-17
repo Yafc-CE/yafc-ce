@@ -498,8 +498,9 @@ doneDrawing:;
 
         BuildSubHeader(gui, atMilestones ? LSs.RecipeCostHeaderAtMilestones : LSs.RecipeCostHeader);
         using (gui.EnterGroup(contentPadding)) {
-            if (!atMilestones) {
-                gui.BuildText(LSs.RecipeCostShiftCtrlHint, TextBlockDisplayStyle.HintText);
+            // Like GetDisplayCost, only point to the current milestones cost when it differs.
+            if (!atMilestones && recipe.Cost(true) != recipe.Cost()) {
+                gui.BuildText(LSs.RecipeCostShiftCtrlHint, TextBlockDisplayStyle.HintText with { WrapText = true });
             }
             gui.BuildText(LSs.RecipeCostIngredients.L(hasInfiniteIngredient ? LSs.NotAvailable.L() : DataUtils.FormatAmount(ingredientCost, UnitOfMeasure.None)));
             gui.BuildText(LSs.RecipeCostLogistics.L(isAutomatable ? DataUtils.FormatAmount(recipe.RecipeBaseCost(atMilestones), UnitOfMeasure.None) : LSs.NotAvailable.L()));
