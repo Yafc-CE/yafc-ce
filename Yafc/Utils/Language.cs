@@ -2,10 +2,10 @@
 using System.IO.Compression;
 using System.Net.Http;
 using Newtonsoft.Json.Linq;
-using Yafc;
 using Yafc.I18n;
 using Yafc.UI;
 
+namespace Yafc;
 
 /// <summary>
 /// Contains information about a language supported by Factorio.
