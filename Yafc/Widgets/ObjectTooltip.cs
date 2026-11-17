@@ -494,6 +494,8 @@ doneDrawing:;
             }
         }
 
+        var breakdown = CostAnalysis.Get(atMilestones).recipeCostBreakdown[recipe];
+
         BuildSubHeader(gui, atMilestones ? LSs.RecipeCostHeaderAtMilestones : LSs.RecipeCostHeader);
         using (gui.EnterGroup(contentPadding)) {
             // Like GetDisplayCost, only point to the current milestones cost when it differs.
@@ -501,6 +503,13 @@ doneDrawing:;
                 gui.BuildText(LSs.RecipeCostShiftCtrlHint, TextBlockDisplayStyle.HintText with { WrapText = true });
             }
             gui.BuildText(LSs.RecipeCostIngredients.L(hasInfiniteIngredient ? LSs.NotAvailable.L() : DataUtils.FormatAmount(ingredientCost, UnitOfMeasure.None)));
+            // The solver uses the single fuel of the recipe's buildings like an ingredient, and the recipe's energy cost is 0 then.
+            if (breakdown.Fuel is Goods fuel) {
+                float fuelCost = fuel.Cost(atMilestones);
+                string fuelAmount = LSs.IngredientAmount.L(DataUtils.FormatAmount(breakdown.FuelAmount, UnitOfMeasure.None), fuel.locName);
+                gui.BuildText(LSs.RecipeCostFuel.L(float.IsPositiveInfinity(fuelCost) ? LSs.NotAvailable.L()
+                    : DataUtils.FormatAmount(fuelCost * breakdown.FuelAmount, UnitOfMeasure.None), fuelAmount), TextBlockDisplayStyle.WrappedText);
+            }
             gui.BuildText(LSs.RecipeCostLogistics.L(DataUtils.FormatAmount(recipe.RecipeBaseCost(atMilestones), UnitOfMeasure.None)));
             gui.AllocateSpacing(0.1f);
             gui.BuildText(LSs.RecipeCostProducts.L(DataUtils.FormatAmount(recipe.ProductCost(atMilestones), UnitOfMeasure.None)));
@@ -508,11 +517,9 @@ doneDrawing:;
 
             // Logistics breakdown
             gui.BuildText(LSs.RecipeLogisticsHeader, Font.subheader);
-            var breakdown = CostAnalysis.Get(atMilestones).recipeCostBreakdown[recipe];
-
             gui.BuildText(LSs.RecipeLogisticsTimeSize.L(DataUtils.FormatAmount(breakdown.TimeSizeCost, UnitOfMeasure.None)));
             if (breakdown.EnergyCost > 0f) {
-                gui.BuildText(LSs.RecipeLogisticsPower.L(DataUtils.FormatAmount(breakdown.EnergyCost, UnitOfMeasure.None)));
+                gui.BuildText(LSs.RecipeLogisticsEnergy.L(DataUtils.FormatAmount(breakdown.EnergyCost, UnitOfMeasure.None)));
             }
             if (breakdown.ItemTransportCost > 0f) {
                 gui.BuildText(LSs.RecipeLogisticsItemTransport.L(DataUtils.FormatAmount(breakdown.ItemTransportCost, UnitOfMeasure.None)));
