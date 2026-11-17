@@ -187,4 +187,38 @@ public class CostAnalysisCrafterTests {
             Assert.All(usedRecipes, r => Assert.Equal((r.name, 0f), (r.name, analysis.recipeWastePercentage[r])));
         }
     }
+
+    [Fact]
+    public void CostAnalysis_CostBreakdown_SplitsTheRecipeCost() {
+        Project project = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        project.settings.PollutionCostModifier = 1;
+        Analysis.Do<CostAnalysis>(project);
+        var breakdowns = CostAnalysis.Instance.recipeCostBreakdown;
+
+        // The furnace burns only wood (2 MJ), so the 500 MJ per craft take 250 wood instead of an energy cost.
+        RecipeCostBreakdown modest = breakdowns[GetRecipe("modest")];
+        Assert.Equal(GetItem("wood"), modest.Fuel);
+        Assert.Equal(250f, modest.FuelAmount, 1e-3f);
+        Assert.Equal(0f, modest.EnergyCost);
+        Assert.Equal(0.1f * 3 * 1.2f, modest.TimeSizeCost, 1e-3f);
+        Assert.Equal(0.02f, modest.ItemTransportCost, 1e-3f);
+        Assert.Equal(1f, modest.MiningPenalty);
+
+        // The flexible furnace can burn wood or peat, so its 500 MJ per craft are charged as energy instead.
+        RecipeCostBreakdown flexible = breakdowns[GetRecipe("flexible")];
+        Assert.Null(flexible.Fuel);
+        Assert.Equal(0.1f * 500, flexible.EnergyCost, 1e-3f);
+
+        Assert.Equal(5 * 0.01f, breakdowns[GetRecipe("dirty")].PollutionCost, 1e-3f);
+
+        RecipeCostBreakdown speedy = breakdowns[GetRecipe("speedy")];
+        Assert.Equal("b-fast-assembler", speedy.Crafter?.name);
+        Assert.Equal(2f, speedy.CrafterSpeed);
+        // Mining doesn't use a single building.
+        Assert.Null(breakdowns[(Recipe)Database.objectsByTypeName["Mechanics.mining.basic-solid.stone"]].Crafter);
+
+        foreach (Recipe recipe in Database.recipes.all.Where(r => r.IsAutomatable())) {
+            Assert.Equal((recipe.name, CostAnalysis.Instance.recipeCost[recipe]), (recipe.name, breakdowns[recipe].TotalCost));
+        }
+    }
 }
