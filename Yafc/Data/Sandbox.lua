@@ -13,6 +13,23 @@ end
 -- Maps the functions replaced in this file to the originals, so debug.getinfo can hide the replacements.
 local shims = {};
 
+-- Native export helpers return status/value pairs. Raise errors here, after the
+-- managed callback has returned, so pcall can catch them without longjmp across C#.
+local exportHelpers = {
+    table_to_json = yafc_table_to_json,
+    encode_string = yafc_encode_string,
+    write_file = yafc_write_file
+}
+yafc_table_to_json, yafc_encode_string, yafc_write_file = nil, nil, nil
+for name, native in pairs(exportHelpers) do
+    helpers[name] = function(...)
+        local ok, value = native(...)
+        if not ok then error(value, 2) end
+        if name ~= "write_file" then return value end
+    end
+    shims[helpers[name]] = native
+end
+
 -- Factorio's load() does not load binary chunks and ignores the mode argument. loadstring is the same function.
 -- The rest is forwarded as-is, because passing an explicit nil env differs from passing no env.
 local raw_load = load;

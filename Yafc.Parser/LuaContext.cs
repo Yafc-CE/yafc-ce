@@ -197,6 +197,8 @@ internal partial class LuaContext : IDisposable {
         lua_pushcclosure(L, Marshal.GetFunctionPointerForDelegate(traceback), 0);
         tracebackReg = luaL_ref(L, REGISTRY);
 
+        RegisterExportHelpers();
+
         if (Directory.Exists("Data/Mod-fixes/")) {
             foreach (string file in Directory.EnumerateFiles("Data/Mod-fixes/", "*.lua")) {
                 string fileName = Path.GetFileName(file);
