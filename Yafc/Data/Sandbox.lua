@@ -2,11 +2,28 @@
 -- Should setup sandboxing and other data that factorio mods expect
 -- "require", "raw_log", "mods" and "settings" are already set up here
 
-local unsetGlobal = {"getfenv","load","loadfile","loadstring","setfenv","coroutine","module","package","io","os","newproxy"};
+-- Match the Lua environment Factorio offers to mods, see https://lua-api.factorio.com/latest/auxiliary/libraries.html
+-- Factorio 2.1 was checked by logging its data stage globals, which shows more than the docs do.
+local unsetGlobal = {"dofile","getfenv","loadfile","setfenv","coroutine","module","io","os","newproxy"};
 
 for i=1,#unsetGlobal do
-	_G[unsetGlobal] = nil;
+	_G[unsetGlobal[i]] = nil;
 end
+
+-- Maps the functions replaced in this file to the originals, so debug.getinfo can hide the replacements.
+local shims = {};
+
+-- Factorio's load() does not load binary chunks and ignores the mode argument. loadstring is the same function.
+-- The rest is forwarded as-is, because passing an explicit nil env differs from passing no env.
+local raw_load = load;
+function load(chunk, chunkname, mode, ...)
+	return raw_load(chunk, chunkname, "t", ...);
+end
+loadstring = load;
+shims[load] = raw_load;
+
+-- Only debug.getinfo() and debug.traceback() are available in Factorio.
+debug = {getinfo = debug.getinfo, traceback = debug.traceback};
 
 local parentTypes = {};
 
@@ -21,6 +38,11 @@ end
 
 require("__core__/lualib/dataloader.lua")
 serpent = require("Serpent")
+
+-- Factorio's package only holds the loaded table, which require fills with "__mod__/path.lua" keys.
+-- The full library can load native code with package.loadlib, and its loaded table still holds io and os.
+-- This comes after requiring the dataloader, which Factorio runs without require.
+package = {loaded = {}};
 
 local raw_log = _G.raw_log;
 _G.raw_log = nil;
@@ -43,6 +65,7 @@ if string.format("%e", 1):match("e%+000$") then
 
 		return raw_format(pattern, ...)
 	end
+	shims[string.format] = raw_format
 end
 
 local raw_getinfo = debug.getinfo
@@ -75,11 +98,11 @@ function debug.getinfo(thread_or_f, f_or_what, what)
 		return result
 	end
 
-	-- If the caller wants info about string.format, hide our shim.
-	if thread_or_f == string.format then
-		return raw_getinfo(raw_format, f_or_what)
-	elseif f_or_what == string.format then
-		return raw_getinfo(thread_or_f, raw_format, what)
+	-- If the caller wants info about a function replaced in this file, hide our shim.
+	if shims[thread_or_f] then
+		return raw_getinfo(shims[thread_or_f], f_or_what)
+	elseif shims[f_or_what] then
+		return raw_getinfo(thread_or_f, shims[f_or_what], what)
 	end
 
 	-- Otherwise, add 1 to f if it's a number, to hide this method from the stack.

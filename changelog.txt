@@ -38,6 +38,8 @@ Date:
         - Resources added to data.script_enabled can be mined again when Yafc does not know where they spawn, such as the Space Exploration resources.
         - Cost analysis: a recipe's size, energy and pollution no longer depend on the order of its buildings' names. They now come from the buildings unlocked at the current milestones, without the character or Pyanodon TURD variant buildings.
         - Cost analysis: recipes whose buildings burn a single fuel no longer pay for their energy twice, once through the fuel and once as a flat energy cost.
+        - While Yafc loads mods, they can no longer use io, os, coroutine, dofile, loadfile or the full package and debug libraries, which Factorio does not offer either. load() and loadstring() only accept text chunks, like in Factorio.
+        - Mods can find the files loaded with require in package.loaded, and require returns true for files that return nothing, like in Factorio.
         - GUI: Deleting the last character in TextInput no longer has a delay.
         - Fix a crash when loading a project that has no pages, or only hidden pages.
     Internal changes:
