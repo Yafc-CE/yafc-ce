@@ -77,8 +77,17 @@ public sealed class InputSystem {
     public bool control => (keyMod & SDL.SDL_Keymod.KMOD_CTRL) != 0;
     public bool shift => (keyMod & SDL.SDL_Keymod.KMOD_SHIFT) != 0;
 
+    private void SetKeyMod(SDL.SDL_Keymod mod) {
+        bool changed = control != ((mod & SDL.SDL_Keymod.KMOD_CTRL) != 0) || shift != ((mod & SDL.SDL_Keymod.KMOD_SHIFT) != 0);
+        keyMod = mod;
+
+        if (changed) {
+            mouseOverWindow?.ModifierKeysChanged();
+        }
+    }
+
     internal void KeyDown(SDL.SDL_Keysym key) {
-        keyMod = key.mod;
+        SetKeyMod(key.mod);
 
         if (activeKeyboardFocus == null || !activeKeyboardFocus.KeyDown(key)) {
             _ = (defaultKeyboardFocus?.KeyDown(key));
@@ -86,7 +95,7 @@ public sealed class InputSystem {
     }
 
     internal void KeyUp(SDL.SDL_Keysym key) {
-        keyMod = key.mod;
+        SetKeyMod(key.mod);
 
         if (activeKeyboardFocus == null || !activeKeyboardFocus.KeyUp(key)) {
             _ = (defaultKeyboardFocus?.KeyUp(key));
