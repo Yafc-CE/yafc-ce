@@ -10,6 +10,23 @@ using Yafc.I18n;
 
 namespace Yafc.Model;
 
+/// <summary>
+/// The parts of a recipe's cost in <see cref="CostAnalysis.recipeCost"/>, which is the cost of a craft without its ingredients and fuel.
+/// </summary>
+/// <param name="TimeSizeCost">The cost of the building's size for the time a craft takes.</param>
+/// <param name="EnergyCost">The cost of the energy per craft. It's 0 when the buildings burn a single fuel, as that fuel pays for it.</param>
+/// <param name="ItemTransportCost">The cost of moving the items that a craft uses and makes.</param>
+/// <param name="FluidTransportCost">The cost of moving the fluids that a craft uses and makes.</param>
+/// <param name="MiningPenalty">The factor that the costs above are multiplied with. It's 1 for recipes that don't mine a resource.</param>
+/// <param name="PollutionCost">The cost of the pollution per craft.</param>
+/// <param name="Fuel">The single fuel that the buildings burn, which the recipe uses like an ingredient, or <see langword="null"/>.</param>
+/// <param name="FuelAmount">The amount of <paramref name="Fuel"/> that a craft burns.</param>
+public readonly record struct RecipeCostBreakdown(float TimeSizeCost, float EnergyCost, float ItemTransportCost, float FluidTransportCost,
+    float MiningPenalty, float PollutionCost, Goods? Fuel, float FuelAmount) {
+
+    public float TotalCost => ((TimeSizeCost + EnergyCost + ItemTransportCost + FluidTransportCost) * MiningPenalty) + PollutionCost;
+}
+
 public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
     private readonly ILogger logger = Logging.GetLogger<CostAnalysis>();
 
@@ -32,6 +49,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
 
     public Mapping<FactorioObject, float> cost;
     public Mapping<Recipe, float> recipeCost;
+    public Mapping<Recipe, RecipeCostBreakdown> recipeCostBreakdown;
     public Mapping<RecipeOrTechnology, float> recipeProductCost;
     public Mapping<FactorioObject, float> flow;
     public Mapping<Recipe, float> recipeWastePercentage;
@@ -120,8 +138,8 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
         var export = Database.objects.CreateMapping<float>();
         var recipeProductionCost = Database.recipesAndTechnologies.CreateMapping<float>();
         recipeCost = Database.recipes.CreateMapping<float>();
+        recipeCostBreakdown = Database.recipes.CreateMapping<RecipeCostBreakdown>();
         flow = Database.objects.CreateMapping<float>();
-        var recipeFuel = Database.recipes.CreateMapping<(Goods? fuel, float amount)>();
         var lastVariable = Database.goods.CreateMapping<Variable>();
 
         foreach (Recipe recipe in Database.recipes.all.ExceptExcluded(this)) {
@@ -229,7 +247,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             float sizeUsage = CostPerSecond * craftingTime * size;
             // When the buildings burn a single fuel, that fuel is added to the recipe below and already pays for the energy.
             float energyCost = singleUsedFuel == null ? CostPerMj * energyPerCraft : 0f;
-            float logisticsCost = (sizeUsage * (1f + (CostPerIngredientPerSize * recipe.ingredients.Length) + (CostPerProductPerSize * recipe.products.Length))) + energyCost;
+            float timeSizeCost = sizeUsage * (1f + (CostPerIngredientPerSize * recipe.ingredients.Length) + (CostPerProductPerSize * recipe.products.Length));
 
             // Special handling for spoilage recipes: cost depends on container efficiency and stack size
             // Spoilage happens in storage containers where many stacks spoil in parallel
@@ -237,11 +255,14 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 int stackSize = spoilingItem.stackSize;
                 // Cost is based on storage space needed: time / (stackSize * slotsPerTile)
                 // This reflects that larger stacks and better containers reduce infrastructure cost
-                logisticsCost = CostPerSecond * recipe.time / (stackSize * bestContainerSlotsPerTile);
+                timeSizeCost = CostPerSecond * recipe.time / (stackSize * bestContainerSlotsPerTile);
+                energyCost = 0f;
             }
 
             var constraint = workspaceSolver.MakeConstraint(double.NegativeInfinity, 0, recipe.name);
             constraints[recipe] = constraint;
+            float itemTransportCost = 0f;
+            float fluidTransportCost = 0f;
 
             foreach (var product in recipe.products) {
                 var var = variables[product.goods];
@@ -249,17 +270,16 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 constraint.SetCoefficientCheck(var, amount, ref lastVariable[product.goods]);
 
                 if (product.goods is Item) {
-                    logisticsCost += amount * CostPerItem;
+                    itemTransportCost += amount * CostPerItem;
                 }
                 else if (product.goods is Fluid) {
-                    logisticsCost += amount * CostPerFluid;
+                    fluidTransportCost += amount * CostPerFluid;
                 }
             }
 
             if (singleUsedFuel != null) {
                 var var = variables[singleUsedFuel];
                 constraint.SetCoefficientCheck(var, -singleUsedFuelAmount, ref lastVariable[singleUsedFuel]);
-                recipeFuel[recipe] = (singleUsedFuel, singleUsedFuelAmount);
             }
 
             foreach (var ingredient in recipe.ingredients) {
@@ -267,12 +287,14 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 constraint.SetCoefficientCheck(var, -ingredient.amount, ref lastVariable[ingredient.goods]);
 
                 if (ingredient.goods is Item) {
-                    logisticsCost += ingredient.amount * CostPerItem;
+                    itemTransportCost += ingredient.amount * CostPerItem;
                 }
                 else if (ingredient.goods is Fluid) {
-                    logisticsCost += ingredient.amount * CostPerFluid;
+                    fluidTransportCost += ingredient.amount * CostPerFluid;
                 }
             }
+
+            float miningPenalty = 1f;
 
             if (recipe.sourceEntity != null && recipe.sourceEntity.mapGenerated) {
                 float totalMining = 0f;
@@ -281,7 +303,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                     totalMining += product.amount;
                 }
 
-                float miningPenalty = MiningPenalty;
+                miningPenalty = MiningPenalty;
                 float totalDensity = recipe.sourceEntity.mapGenDensity / totalMining;
 
                 // A density of 0 means the density could not be estimated. Don't treat such resources as the rarest possible.
@@ -289,13 +311,18 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                     float extraPenalty = MathF.Log(MiningMaxDensityForPenalty / totalDensity);
                     miningPenalty += Math.Min(extraPenalty, MiningMaxExtraPenaltyForRarity);
                 }
-
-                logisticsCost *= miningPenalty;
             }
+
+            float pollutionCost = 0f;
 
             if (emissions >= 0f) {
-                logisticsCost += emissions * CostPerPollution * craftingTime * project.settings.PollutionCostModifier;
+                pollutionCost = emissions * CostPerPollution * craftingTime * project.settings.PollutionCostModifier;
             }
+
+            RecipeCostBreakdown breakdown = new(timeSizeCost, energyCost, itemTransportCost, fluidTransportCost, miningPenalty, pollutionCost,
+                singleUsedFuel, singleUsedFuel == null ? 0f : singleUsedFuelAmount);
+            recipeCostBreakdown[recipe] = breakdown;
+            float logisticsCost = breakdown.TotalCost;
 
             constraint.SetUb(logisticsCost);
             export[recipe] = logisticsCost;
@@ -387,7 +414,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 }
 
                 // The solver treats the single fuel of the recipe's buildings as an ingredient, so the recipe's cost includes it too.
-                if (recipe is Recipe r && recipeFuel[r] is (Goods fuel, float fuelAmount)) {
+                if (recipe is Recipe r && recipeCostBreakdown[r] is { Fuel: Goods fuel, FuelAmount: float fuelAmount }) {
                     export[o] += export[fuel] * fuelAmount;
                 }
 
