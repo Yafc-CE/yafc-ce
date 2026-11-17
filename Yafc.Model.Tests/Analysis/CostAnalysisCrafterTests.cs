@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System.Linq;
+using Xunit;
 
 namespace Yafc.Model.Tests;
 
@@ -37,6 +38,15 @@ public class CostAnalysisCrafterTests {
         _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
 
         Assert.Equal((0.1f * 20 * 1.2f) + 0.02f, CostAnalysis.Instance.recipeCost[GetRecipe("huge")], 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_SingleFuelCrafter_RecipeCostIncludesTheFuel() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var costs = CostAnalysis.Instance.cost;
+
+        // The furnace burns only wood (2 MJ), so the 500 MJ per craft take 250 wood, just like an ingredient would.
+        Assert.Equal(SmallCrafterCost + (250 * costs[GetItem("wood")]), costs[GetRecipe("modest")], 1e-1f);
     }
 
     [Fact]
@@ -164,5 +174,17 @@ public class CostAnalysisCrafterTests {
         // 48 trees grow at once, so each one takes 80 / 48 seconds. The 7 x 7 grid is 21 tiles wide. The recipe has one ingredient and
         // one product, which are both items.
         Assert.Equal((0.1f * (80f / 48f) * 21 * 1.3f) + (2 * 0.02f), CostAnalysis.Instance.recipeCost[planting], 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_RecipesInUse_HaveNoWaste() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+
+        foreach (var analysis in new[] { CostAnalysis.Instance, CostAnalysis.InstanceAtMilestones }) {
+            var usedRecipes = Database.recipes.all.Where(r => analysis.flow[r] > 0f).ToList();
+
+            Assert.NotEmpty(usedRecipes);
+            Assert.All(usedRecipes, r => Assert.Equal((r.name, 0f), (r.name, analysis.recipeWastePercentage[r])));
+        }
     }
 }
