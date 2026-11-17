@@ -481,8 +481,6 @@ doneDrawing:;
     }
 
     private static void BuildRecipeCostBreakdown(Recipe recipe, ImGui gui, bool atMilestones) {
-        bool isAutomatable = atMilestones ? recipe.IsAutomatableWithCurrentMilestones() : recipe.IsAutomatable();
-
         // Calculate ingredient cost
         float ingredientCost = 0f;
         bool hasInfiniteIngredient = false;
@@ -503,9 +501,9 @@ doneDrawing:;
                 gui.BuildText(LSs.RecipeCostShiftCtrlHint, TextBlockDisplayStyle.HintText with { WrapText = true });
             }
             gui.BuildText(LSs.RecipeCostIngredients.L(hasInfiniteIngredient ? LSs.NotAvailable.L() : DataUtils.FormatAmount(ingredientCost, UnitOfMeasure.None)));
-            gui.BuildText(LSs.RecipeCostLogistics.L(isAutomatable ? DataUtils.FormatAmount(recipe.RecipeBaseCost(atMilestones), UnitOfMeasure.None) : LSs.NotAvailable.L()));
+            gui.BuildText(LSs.RecipeCostLogistics.L(DataUtils.FormatAmount(recipe.RecipeBaseCost(atMilestones), UnitOfMeasure.None)));
             gui.AllocateSpacing(0.1f);
-            gui.BuildText(LSs.RecipeCostProducts.L(isAutomatable ? DataUtils.FormatAmount(recipe.ProductCost(atMilestones), UnitOfMeasure.None) : LSs.NotAvailable.L()));
+            gui.BuildText(LSs.RecipeCostProducts.L(DataUtils.FormatAmount(recipe.ProductCost(atMilestones), UnitOfMeasure.None)));
             gui.AllocateSpacing(0.5f);
 
             // Logistics breakdown
@@ -597,7 +595,16 @@ doneDrawing:;
 
         // Cost breakdown section for recipes (not technologies)
         if (showCosts && recipe is Recipe costRecipe && costRecipe.IsAutomatable()) {
-            BuildRecipeCostBreakdown(costRecipe, gui, atMilestones);
+            if (atMilestones && !costRecipe.IsAutomatableWithCurrentMilestones()) {
+                // The current milestones cost analysis skips this recipe, so there is nothing to break down.
+                BuildSubHeader(gui, LSs.RecipeCostHeaderAtMilestones);
+                using (gui.EnterGroup(contentPadding)) {
+                    gui.BuildText(LSs.TooltipNotAutomatableYet.L(recipe.type), TextBlockDisplayStyle.WrappedText);
+                }
+            }
+            else {
+                BuildRecipeCostBreakdown(costRecipe, gui, atMilestones);
+            }
         }
 
         if (recipe is Recipe { products.Length: > 0 } && !(recipe.products.Length == 1 && recipe.products[0].IsSimple)) {
