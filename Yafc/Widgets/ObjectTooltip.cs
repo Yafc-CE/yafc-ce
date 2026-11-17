@@ -527,11 +527,12 @@ doneDrawing:;
             if (breakdown.FluidTransportCost > 0f) {
                 gui.BuildText(LSs.RecipeLogisticsFluidTransport.L(DataUtils.FormatAmount(breakdown.FluidTransportCost, UnitOfMeasure.None)));
             }
-            if (breakdown.PollutionCost > 0f) {
-                gui.BuildText(LSs.RecipeLogisticsPollution.L(DataUtils.FormatAmount(breakdown.PollutionCost, UnitOfMeasure.None)));
-            }
+            // The mining penalty multiplies the rows above it, but not the pollution.
             if (breakdown.MiningPenalty > 1f) {
                 gui.BuildText(LSs.RecipeLogisticsMiningPenalty.L(DataUtils.FormatAmount(breakdown.MiningPenalty, UnitOfMeasure.None)));
+            }
+            if (breakdown.PollutionCost > 0f) {
+                gui.BuildText(LSs.RecipeLogisticsPollution.L(DataUtils.FormatAmount(breakdown.PollutionCost, UnitOfMeasure.None)));
             }
         }
     }
