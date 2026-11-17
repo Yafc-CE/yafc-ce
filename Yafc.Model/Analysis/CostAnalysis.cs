@@ -21,8 +21,12 @@ namespace Yafc.Model;
 /// <param name="PollutionCost">The cost of the pollution per craft.</param>
 /// <param name="Fuel">The single fuel that the buildings burn, which the recipe uses like an ingredient, or <see langword="null"/>.</param>
 /// <param name="FuelAmount">The amount of <paramref name="Fuel"/> that a craft burns.</param>
+/// <param name="Crafter">The building that prices the recipe, or <see langword="null"/> for mining, which uses the lowest size, energy
+/// and pollution of its drills at speed 1, and for recipes without crafters.</param>
+/// <param name="CrafterSpeed">The crafting speed of <paramref name="Crafter"/> that the cost assumes, with the modules that the cost
+/// analysis gives it.</param>
 public readonly record struct RecipeCostBreakdown(float TimeSizeCost, float EnergyCost, float ItemTransportCost, float FluidTransportCost,
-    float MiningPenalty, float PollutionCost, Goods? Fuel, float FuelAmount) {
+    float MiningPenalty, float PollutionCost, Goods? Fuel, float FuelAmount, EntityCrafter? Crafter, float CrafterSpeed) {
 
     public float TotalCost => ((TimeSizeCost + EnergyCost + ItemTransportCost + FluidTransportCost) * MiningPenalty) + PollutionCost;
 }
@@ -158,6 +162,8 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             int buildingSize = int.MaxValue;
             float energyPerCraft = float.PositiveInfinity;
             float craftingTime = recipe.time;
+            EntityCrafter? pricingCrafter = null;
+            float pricingCrafterSpeed = 0f;
             EntityCrafter[] crafters = GetCraftersForCost(recipe, out bool noneUnlocked);
 
             if (recipe.flags.HasFlags(RecipeFlags.UsesMiningProductivity)) {
@@ -204,6 +210,9 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
                 // Other recipes are priced with one building, using its speed, size, energy and pollution together.
                 buildingSize = crafter.factorioType == "agricultural-tower" ? crafter.agriculturalFieldWidth : crafter.size;
                 energyPerCraft = energy;
+                pricingCrafter = crafter;
+                // A building that can't craft keeps the recipe time, as if its speed were 1.
+                pricingCrafterSpeed = speed > 0f ? speed : 1f;
 
                 if (speed > 0f) {
                     craftingTime = recipe.time / speed;
@@ -320,7 +329,7 @@ public class CostAnalysis(bool onlyCurrentMilestones) : Analysis {
             }
 
             RecipeCostBreakdown breakdown = new(timeSizeCost, energyCost, itemTransportCost, fluidTransportCost, miningPenalty, pollutionCost,
-                singleUsedFuel, singleUsedFuel == null ? 0f : singleUsedFuelAmount);
+                singleUsedFuel, singleUsedFuel == null ? 0f : singleUsedFuelAmount, pricingCrafter, pricingCrafterSpeed);
             recipeCostBreakdown[recipe] = breakdown;
             float logisticsCost = breakdown.TotalCost;
 

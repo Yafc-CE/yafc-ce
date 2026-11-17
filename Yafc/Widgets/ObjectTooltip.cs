@@ -517,6 +517,16 @@ doneDrawing:;
 
             // Logistics breakdown
             gui.BuildText(LSs.RecipeLogisticsHeader, Font.subheader);
+            if (breakdown.Crafter is EntityCrafter crafter) {
+                using (gui.EnterRow()) {
+                    gui.BuildFactorioObjectIcon(crafter);
+                    gui.BuildText(LSs.RecipeLogisticsBuilding.L(crafter.locName, DataUtils.FormatAmount(breakdown.CrafterSpeed, UnitOfMeasure.None)),
+                        TextBlockDisplayStyle.WrappedText);
+                }
+            }
+            else if (recipe.flags.HasFlags(RecipeFlags.UsesMiningProductivity)) {
+                gui.BuildText(LSs.RecipeLogisticsMiningBuilding, TextBlockDisplayStyle.HintText with { WrapText = true });
+            }
             gui.BuildText(LSs.RecipeLogisticsTimeSize.L(DataUtils.FormatAmount(breakdown.TimeSizeCost, UnitOfMeasure.None)));
             if (breakdown.EnergyCost > 0f) {
                 gui.BuildText(LSs.RecipeLogisticsEnergy.L(DataUtils.FormatAmount(breakdown.EnergyCost, UnitOfMeasure.None)));

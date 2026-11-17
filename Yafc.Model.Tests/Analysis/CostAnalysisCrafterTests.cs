@@ -211,6 +211,12 @@ public class CostAnalysisCrafterTests {
 
         Assert.Equal(5 * 0.01f, breakdowns[GetRecipe("dirty")].PollutionCost, 1e-3f);
 
+        RecipeCostBreakdown speedy = breakdowns[GetRecipe("speedy")];
+        Assert.Equal("b-fast-assembler", speedy.Crafter?.name);
+        Assert.Equal(2f, speedy.CrafterSpeed);
+        // Mining doesn't use a single building.
+        Assert.Null(breakdowns[(Recipe)Database.objectsByTypeName["Mechanics.mining.basic-solid.stone"]].Crafter);
+
         foreach (Recipe recipe in Database.recipes.all.Where(r => r.IsAutomatable())) {
             Assert.Equal((recipe.name, CostAnalysis.Instance.recipeCost[recipe]), (recipe.name, breakdowns[recipe].TotalCost));
         }
