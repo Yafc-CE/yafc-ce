@@ -203,6 +203,11 @@ public abstract class Window : IDisposable {
         Rebuild();
     }
 
+    /// <summary>
+    /// Rebuilds the open tooltip when Ctrl or Shift is pressed or released, since some tooltips show more while these are held.
+    /// </summary>
+    internal void ModifierKeysChanged() => tooltip?.Rebuild();
+
     public void ShowTooltip(ImGui targetGui, Rect target, GuiBuilder builder, float width = 20f) {
         simpleTooltip ??= new SimpleTooltip();
         simpleTooltip.Show(builder, targetGui, target, width);

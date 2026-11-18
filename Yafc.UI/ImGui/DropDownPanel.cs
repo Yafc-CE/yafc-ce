@@ -30,6 +30,11 @@ public abstract class AttachedPanel {
         owner?.Rebuild();
     }
 
+    public void Rebuild() {
+        contents.Rebuild();
+        owner?.Rebuild();
+    }
+
     public void Build(ImGui gui) {
         owner = gui;
 
