@@ -97,22 +97,6 @@ public abstract class Window : IDisposable {
         }
     }
 
-    public void UpdateSize() {
-        SDL.SDL_GetWindowSize(window, out int windowWidth, out int windowHeight);
-        contentSize = new Vector2(DipsToUnits(windowWidth), DipsToUnits(windowHeight));
-
-        // Force any changes to sizes to be applied when calling CalculateState.
-        Rebuild();
-        // Perform initial layout to dynamically calculate necessary window height.
-        contentSize = rootGui.CalculateState(DipsToUnits(windowWidth));
-
-        windowHeight = MathUtils.Round(UnitsToDips(contentSize.Y));
-        SDL.SDL_SetWindowSize(window, windowWidth, windowHeight);
-
-        // Now that the window size may have changed, make sure everything is re-rendered with the new size and other changes.
-        rootGui.MarkEverythingForRebuild();
-    }
-
     internal static float UnitsToDips(float units) => units * MathUtils.Round(96f / 6.8f);
 
     internal static float DipsToUnits(float dips) => dips / MathUtils.Round(96f / 6.8f);
