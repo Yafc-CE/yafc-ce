@@ -6,6 +6,7 @@ using Yafc.UI;
 namespace Yafc;
 
 public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
+    internal readonly ScrollArea languageScroll = new ScrollArea(20f, Language.LanguageSelection, collapsible: true);
 
     internal GlobalPreferencesScreen(Window parent) : base(ImGuiUtils.DefaultScreenPadding) {
         Create(LSs.GlobalPreferences, 50, parent);
@@ -26,9 +27,9 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
         }
     }
 
-    private static void ApplyFont(string? result) {
+    private void ApplyFont(string? result) {
         Preferences.Instance.overrideFont = result;
-        Language.languageScroll.RebuildContents();
+        languageScroll.RebuildContents();
         Preferences.Instance.Save();
         Program.SetFont();
         // All windows need to be forcibly updated when font changes, as different fonts effectively have different (effective) sizes.
@@ -52,7 +53,7 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
                 }
 
                 if (gui.BuildLink(lang)) {
-                    gui.ShowDropDown(Language.languageScroll.Build);
+                    gui.ShowDropDown(languageScroll.Build);
                 }
             }
 

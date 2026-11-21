@@ -32,7 +32,6 @@ internal sealed record LanguageInfo(string LatinName, string NativeName, string 
 /// </summary>
 internal static class Language {
     internal static bool downloading;
-    internal static readonly ScrollArea languageScroll = new ScrollArea(20f, LanguageSelection, collapsible: true);
 
     internal static SortedList<string, LanguageInfo> LanguageMapping { get; } = new()
     {
