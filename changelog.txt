@@ -29,7 +29,6 @@ Date:
         - Added Global Preferences, a new screen with all the non-project-specific preferences. This can be accessed from 
             both the Welcome Screen and main menu. 
         - The Preferences screen now shows *only* project specific settings, and is renamed to Project Preferences.
-        - Updated the Font selection to no longer require a restart.
         - Updated the font selection to now only show .ttf and .oft files.
     Fixes:
         - Cost analysis: mining recipes in Factorio 2.0 were always penalized as if the resource was extremely rare. Mined resources are now considerably cheaper.
