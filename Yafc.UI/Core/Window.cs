@@ -196,7 +196,7 @@ public abstract class Window : IDisposable {
         Ui.UnregisterWindow(this);
     }
 
-    private void Focus() {
+    public void Focus() {
         if (window != IntPtr.Zero) {
             SDL.SDL_RaiseWindow(window);
             SDL.SDL_RestoreWindow(window);

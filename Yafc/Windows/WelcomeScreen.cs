@@ -203,7 +203,12 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
 
                 //TODO: Fix tooltip, Icon, 
                 if (gui.BuildButton(Icon.Settings).WithTooltip(gui, LSs.WelcomeGlobalPreferencesTooltip)) {
-                    _ = new GlobalPreferencesScreen(this);
+                    if (ChildWindow is not GlobalPreferencesScreen) {
+                        _ = new GlobalPreferencesScreen(this);
+                    }
+                    else {
+                        ChildWindow.Focus();
+                    }
                 }
                 if (gui.RemainingRow().BuildButton(createText, active: canCreate)) {
                     LoadProject();

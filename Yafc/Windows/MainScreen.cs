@@ -402,7 +402,12 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
         }
 
         if (gui.BuildContextMenuButton(LSs.GlobalPreferences) && gui.CloseDropdown()) {
-            _ = new GlobalPreferencesScreen(this);
+            if (ChildWindow is not GlobalPreferencesScreen) {
+                _ = new GlobalPreferencesScreen(this);
+            }
+            else {
+                ChildWindow.Focus();
+            }
         }
 
         if (gui.BuildContextMenuButton(LSs.Preferences) && gui.CloseDropdown()) {
