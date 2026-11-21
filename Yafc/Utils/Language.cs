@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Net.Http;
+using System.Reflection;
 using Newtonsoft.Json.Linq;
 using Yafc.I18n;
 using Yafc.UI;
@@ -94,8 +97,7 @@ internal static class Language {
         DoLanguageList(gui, LanguageMapping, true);
         if (!Program.hasOverriddenFont) {
             gui.AllocateSpacing(0.5f);
-
-            gui.BuildText(LSs.WelcomeAlertNeedADifferentFont, TextBlockDisplayStyle.WrappedText);
+            gui.BuildText((gui.window is WelcomeScreen ? LSs.WelcomeAlertNeedADifferentFont : LSs.GlobalPreferencesAlertNeedADifferentFontMainMenu), TextBlockDisplayStyle.WrappedText);
             gui.AllocateSpacing(0.5f);
         }
         DoLanguageList(gui, LanguageMapping, false);
@@ -109,7 +111,16 @@ internal static class Language {
                     result = gui.BuildLink($"{v.NativeName} ({k})");
                 }
                 else {
-                    result = gui.BuildLink($"{v.LatinName} ({k})");
+                    // Languages that are not supported by the current Font require a restart, 
+                    //  and can thereby only be selected from the WelcomeScreen, or when Global Preferences is opened from there.
+                    if (gui.window is WelcomeScreen) {
+                        result = gui.BuildLink($"{v.LatinName} ({k})");
+                    }
+                    else {
+                        TextBlockDisplayStyle style = TextBlockDisplayStyle.WrappedText with { Color = SchemeColor.GreyText };
+                        gui.BuildText($"{v.LatinName} ({k})", style);
+                        result = false;
+                    }
                 }
 
                 if (result) {
@@ -117,7 +128,7 @@ internal static class Language {
                         Preferences.Instance.language = k;
                         Preferences.Instance.Save();
                         gui.CloseDropdown();
-                        Program.SetFont();
+                        restartIfNecessary();
                     }
                     else {
                         gui.ShowDropDown(async gui => {
@@ -154,8 +165,7 @@ internal static class Language {
                                 // Save and restart
                                 Preferences.Instance.language = k;
                                 Preferences.Instance.Save();
-                                Program.SetFont();
-                                downloading = false;
+                                restartIfNecessary();
                             }
                         });
                     }
@@ -165,7 +175,13 @@ internal static class Language {
                 Preferences.Instance.language = k;
                 Preferences.Instance.Save();
                 _ = gui.CloseDropdown();
-                //restartIfNecessary(); //TODO: This is the one case where a restart might be required! (If opened from the main window...)
+            }
+        }
+
+        static void restartIfNecessary() {
+            if (!Program.hasOverriddenFont) {
+                Process.Start("dotnet", Assembly.GetEntryAssembly()!.Location);
+                Environment.Exit(0);
             }
         }
     }

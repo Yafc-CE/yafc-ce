@@ -31,9 +31,6 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
         Preferences.Instance.overrideFont = result;
         languageScroll.RebuildContents();
         Preferences.Instance.Save();
-        Program.SetFont();
-        // All windows need to be forcibly updated when font changes, as different fonts effectively have different (effective) sizes.
-        Ui.UpdateWindowSizes();
     }
 
     protected override void BuildContents(ImGui gui) {

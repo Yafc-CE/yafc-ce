@@ -54,7 +54,8 @@ public static class Program {
         }
     }
 
-    internal static void SetFont() {
+    // SetFont should only be called on startup, as it requires re-sizing windows and other UI elements!
+    private static void SetFont() {
         string? overrideFont = Preferences.Instance.overrideFont;
         FontFile? overriddenFontFile = null;
 
