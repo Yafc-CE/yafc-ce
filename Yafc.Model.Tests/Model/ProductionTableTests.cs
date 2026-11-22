@@ -4,11 +4,14 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
+using Yafc.I18n;
 
 namespace Yafc.Model.Tests.Model;
 
 [Collection("LuaDependentTests")]
 public class ProductionTableTests {
+    private const string InfeasibleLinkLua = "Yafc.Model.Tests.Model.ProductionTableTests.InfeasibleLink.lua";
+
     [Fact]
     public void CreateLink_WithSuspendedImmediateScheduler_UpdatesLinkMapAfterMutation() {
         _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Model.ProductionTableContentTests.lua");
@@ -49,7 +52,7 @@ public class ProductionTableTests {
 
     [Fact]
     public async Task Solve_UsesProjectThreadSwitcher_ForInfeasibleLink() {
-        Project project = LuaDependentTestHelper.GetProjectForLua();
+        Project project = LuaDependentTestHelper.GetProjectForLua(InfeasibleLinkLua);
         CountingModelThreadSwitcher switcher = new();
         project.modelThreadSwitcher = switcher;
 
@@ -98,6 +101,38 @@ public class ProductionTableTests {
         // only inside the infeasibility diagnostics branch exercised by this test.
         Assert.Equal(1, switcher.foregroundSwitches);
         Assert.Equal([CountingModelThreadSwitcher.SwitchEvent.Background, CountingModelThreadSwitcher.SwitchEvent.Foreground], switcher.events);
+    }
+
+    [Fact]
+    public async Task Solve_ReportsCostsIgnoredBeforeBuiltCount_WhenOverproductionIsRequired() {
+        Project project = LuaDependentTestHelper.GetProjectForLua(InfeasibleLinkLua);
+
+        Goods dummy3 = Database.items.all.Single(g => g.name == "dummy_3");
+        Goods ash = Database.items.all.Single(g => g.name == "ash");
+        CostAnalysis.Instance.cost[dummy3] = 1f;
+        CostAnalysis.Instance.cost[ash] = 1f;
+
+        ProjectPage page = new(project, typeof(ProductionTable));
+        project.pages.Add(page);
+        ProductionTable table = (ProductionTable)page.content;
+        table.AddRecipe(Database.recipes.all.Single(r => r.name == "recipe").With(Quality.Normal), DataUtils.DeterministicComparer);
+        table.AddRecipe(Database.recipes.all.Single(r => r.name == "recipe2").With(Quality.Normal), DataUtils.DeterministicComparer);
+        RecipeRow producer = table.recipes[0];
+        RecipeRow ashConsumer = table.recipes[1];
+
+        // Exporting dummy_3 forces the producer to make more ash than the fixed consumer can use,
+        // so the ash link can only be satisfied with overproduction (slack).
+        Assert.True(table.CreateLink(dummy3.With(Quality.Normal)));
+        Assert.True(table.CreateLink(ash.With(Quality.Normal)));
+        table.links.Single(l => l.goods.target == dummy3).amount = 10f;
+        ashConsumer.fixedBuildings = 0.01f;
+        producer.builtBuildings = 0;
+
+        var error = await table.Solve(page);
+
+        Assert.True(producer.parameters.warningFlags.HasFlag(WarningFlags.OverproductionRequired));
+        Assert.True(producer.parameters.warningFlags.HasFlag(WarningFlags.ExceedsBuiltCount));
+        Assert.Equal(LSs.ProductionTableCostsIgnored.L(), error);
     }
 
     [Fact]

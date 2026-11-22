@@ -556,6 +556,7 @@ match:
         }
 
         var result = productionTableSolver.Solve();
+        bool costsIgnored = false;
 
         if (result is not Solver.ResultStatus.FEASIBLE and not Solver.ResultStatus.OPTIMAL) {
             objective.Clear();
@@ -589,6 +590,8 @@ match:
             await page.owner.modelThreadSwitcher.SwitchToForeground();
 
             if (result is Solver.ResultStatus.OPTIMAL or Solver.ResultStatus.FEASIBLE) {
+                // The slack solve minimized only the slack, so the recipe costs did not steer this solution.
+                costsIgnored = true;
                 List<IProductionLink> linkList = [];
 
                 for (int i = 0; i < allLinks.Count; i++) {
@@ -677,6 +680,11 @@ match:
         bool builtCountExceeded = CheckBuiltCountExceeded();
 
         CalculateFlow(null);
+
+        if (costsIgnored) {
+            // Every result of a solve that ignored the costs is unreliable, so report this error first.
+            return LSs.ProductionTableCostsIgnored;
+        }
 
         return builtCountExceeded ? LSs.ProductionTableRequiresMoreBuildings : null;
     }
