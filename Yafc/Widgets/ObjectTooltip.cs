@@ -503,7 +503,7 @@ doneDrawing:;
                 gui.BuildText(LSs.RecipeCostShiftCtrlHint, TextBlockDisplayStyle.HintText with { WrapText = true });
             }
             gui.BuildText(LSs.RecipeCostIngredients.L(hasInfiniteIngredient ? LSs.NotAvailable.L() : DataUtils.FormatAmount(ingredientCost, UnitOfMeasure.None)));
-            // The solver uses the single fuel of the recipe's buildings like an ingredient, and the recipe's energy cost is 0 then.
+            // When a fuel pays for the recipe's energy, it's shown like an ingredient, and the recipe's energy cost is 0.
             if (breakdown.Fuel is Goods fuel) {
                 float fuelCost = fuel.Cost(atMilestones);
                 string fuelAmount = LSs.IngredientAmount.L(DataUtils.FormatAmount(breakdown.FuelAmount, UnitOfMeasure.None), fuel.locName);

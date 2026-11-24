@@ -50,6 +50,7 @@ Date:
         - Cost analysis: the cost of a recipe whose buildings burn a single fuel now includes that fuel, so its cost and waste are no longer too low.
         - Factorio 2.1: run each file loaded with require() only once for the whole data stage, like Factorio does. This fixes loading PyBlock. Pyanodon mods now need pypostprocessing 3.1.8 or newer.
         - Undoing the removal of a nested recipe also restores the links of its parent tables that were removed because nothing else used them.
+        - Cost analysis: buildings with a choice of item fuels, like the Py bhoddos culture with its fuel rods, now pay for their cheapest fuel when it costs more than the flat energy price, instead of always paying the flat price.
     Internal changes:
         - Enable diagnostic "CA1061 Do not hide base class methods" as error
         - Enable diagnostic "IDE0052 Remove unread private members" as warning

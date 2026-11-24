@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Xunit;
 
 namespace Yafc.Model.Tests;
@@ -25,12 +26,72 @@ public class CostAnalysisCrafterTests {
     [Fact]
     public void CostAnalysis_SingleFuelCrafter_PaysForTheFuelOnly() {
         _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
-        var costs = CostAnalysis.Instance.recipeCost;
+        var costs = CostAnalysis.Instance;
 
         // The wood that the furnace burns is added to the recipe, so the recipe itself has no energy cost.
-        Assert.Equal(SmallCrafterCost, costs[GetRecipe("modest")], 1e-3f);
-        // The flexible furnace can burn wood or peat, so its 500 MJ per craft are charged as energy instead.
-        Assert.Equal(SmallCrafterCost + (0.1f * 500), costs[GetRecipe("flexible")], 1e-3f);
+        Assert.Equal(SmallCrafterCost, costs.recipeCost[GetRecipe("modest")], 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_MultiFuelCrafter_PaysForTheCheapestFuel() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var costs = CostAnalysis.Instance;
+        float cheapestFuel = MathF.Min(costs.cost[GetItem("wood")], costs.cost[GetItem("peat")]);
+
+        // The flexible furnace can burn wood or peat, which cost more than the flat price. Both have 2 MJ, so the 500 MJ per craft take
+        // 250 of whichever is cheaper.
+        Assert.Equal(SmallCrafterCost + (250 * cheapestFuel), costs.cost[GetRecipe("flexible")], 1e-1f);
+        // Like a single fuel, the cheapest fuel is not part of the recipe's own cost, so the recipe has no energy cost.
+        Assert.Equal(SmallCrafterCost, costs.recipeCost[GetRecipe("flexible")], 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_MultiFuelDrill_ComparesTheFuelWithTheFlatPriceAndThePenalty() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var mining = (Recipe)Database.objectsByTypeName["Mechanics.mining.choice-solid.choice-ore"];
+        RecipeCostBreakdown breakdown = CostAnalysis.Instance.recipeCostBreakdown[mining];
+        float cheapestFuel = MathF.Min(CostAnalysis.Instance.cost[GetItem("wood")], CostAnalysis.Instance.cost[GetItem("peat")]) / 2;
+
+        // Wood and peat cost more than the flat price per MJ, but less than the flat price with the penalty for mining rare ore. So the
+        // drill keeps the flat price, which costs less with the penalty than the fuel would.
+        Assert.InRange(cheapestFuel, 0.1f, 0.1f * breakdown.MiningPenalty);
+        Assert.Null(breakdown.Fuel);
+        Assert.Equal(0.1f * 2, breakdown.EnergyCost, 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_DrillsWithDifferentFuels_PayTheFlatPrice() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var mining = (Recipe)Database.objectsByTypeName["Mechanics.mining.shared-solid.shared-ore"];
+        RecipeCostBreakdown breakdown = CostAnalysis.Instance.recipeCostBreakdown[mining];
+
+        // One drill burns peat or nuggets, the other only nuggets. Nuggets are the only fuel that both burn, but they aren't treated as a
+        // single fuel, since the first drill has a choice. So the recipe pays the flat price for its 2 MJ per ore, instead of the cheap nuggets.
+        Assert.Null(breakdown.Fuel);
+        Assert.Equal(0.1f * 2, breakdown.EnergyCost, 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_FluidBurnerWithSeveralFuels_PaysTheFlatPrice() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        RecipeCostBreakdown breakdown = CostAnalysis.Instance.recipeCostBreakdown[GetRecipe("gassed")];
+
+        // The gas furnace burns light or heavy gas, which both cost more than the flat price per MJ. It still keeps the flat price, since a
+        // fluid burner can usually burn any fluid with a fuel value, including byproducts that cost almost nothing.
+        Assert.True(CostAnalysis.Instance.cost[(Goods)Database.objectsByTypeName["Fluid.light-gas"]] > 0.1f);
+        Assert.Null(breakdown.Fuel);
+        Assert.Equal(0.1f * 500, breakdown.EnergyCost, 1e-3f);
+    }
+
+    [Fact]
+    public void CostAnalysis_MultiFuelCrafter_PaysAtLeastTheFlatPrice() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var costs = CostAnalysis.Instance.cost;
+
+        // Nuggets cost far less than the flat price per MJ, so the frugal furnace, which can also burn peat, pays the flat price instead.
+        Assert.Equal(SmallCrafterCost + (0.1f * 500), costs[GetRecipe("frugal")], 1e-1f);
+        // A furnace that burns only nuggets still pays for the 5 nuggets it burns.
+        Assert.Equal(SmallCrafterCost + (5 * costs[GetItem("nugget")]), costs[GetRecipe("nuggeted")], 1e-1f);
     }
 
     [Fact]
@@ -158,6 +219,17 @@ public class CostAnalysisCrafterTests {
     }
 
     [Fact]
+    public void CostAnalysis_Mining_DoesNotApplyTheRarityPenaltyToTheFuel() {
+        _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
+        var mining = (Recipe)Database.objectsByTypeName["Mechanics.mining.rare-solid.ore"];
+        var costs = CostAnalysis.Instance;
+
+        // The drill burns one wood per ore. The penalty for mining rare ore applies to the rest of the cost, but not to that wood, since
+        // the drill burns the same amount however rare the ore is.
+        Assert.Equal(costs.cost[GetItem("wood")], costs.cost[mining] - costs.recipeCost[mining], 1e-3f);
+    }
+
+    [Fact]
     public void CostAnalysis_Pumping_UsesTheFastestPump_WithItsSpeedAndSize() {
         _ = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Analysis.CostAnalysisCrafterTests.lua");
         var pumping = (Recipe)Database.objectsByTypeName["Mechanics.pump.water.water"];
@@ -204,10 +276,17 @@ public class CostAnalysisCrafterTests {
         Assert.Equal(0.02f, modest.ItemTransportCost, 1e-3f);
         Assert.Equal(1f, modest.MiningPenalty);
 
-        // The flexible furnace can burn wood or peat, so its 500 MJ per craft are charged as energy instead.
+        // The flexible furnace can burn wood or peat (2 MJ each), which cost more than the flat price, so it burns 250 of the cheaper one.
         RecipeCostBreakdown flexible = breakdowns[GetRecipe("flexible")];
-        Assert.Null(flexible.Fuel);
-        Assert.Equal(0.1f * 500, flexible.EnergyCost, 1e-3f);
+        Goods cheaperFuel = CostAnalysis.Instance.cost[GetItem("wood")] <= CostAnalysis.Instance.cost[GetItem("peat")] ? GetItem("wood") : GetItem("peat");
+        Assert.Equal(cheaperFuel, flexible.Fuel);
+        Assert.Equal(250f, flexible.FuelAmount, 1e-3f);
+        Assert.Equal(0f, flexible.EnergyCost);
+
+        // The frugal furnace can burn peat or nuggets, and nuggets cost less than the flat price, so it pays the flat price as energy.
+        RecipeCostBreakdown frugal = breakdowns[GetRecipe("frugal")];
+        Assert.Null(frugal.Fuel);
+        Assert.Equal(0.1f * 500, frugal.EnergyCost, 1e-3f);
 
         Assert.Equal(5 * 0.01f, breakdowns[GetRecipe("dirty")].PollutionCost, 1e-3f);
 

@@ -58,6 +58,19 @@ local function drill(name, mining_speed, size)
   }
 end
 
+local function burner_drill(name, resource_category, fuel_categories)
+  return {
+    type = "mining-drill",
+    name = name,
+    mining_speed = 1,
+    energy_usage = "2MW",
+    energy_source = { type = "burner", fuel_categories = fuel_categories },
+    resource_categories = { resource_category },
+    vector_to_place_result = { 0, -1.85 },
+    selection_box = { { -1.5, -1.5 }, { 1.5, 1.5 } },
+  }
+end
+
 local function pump(name, pumping_speed, size)
   local half = size / 2
   return {
@@ -77,6 +90,17 @@ local function free_recipe(name, category)
     energy_required = 1,
     ingredients = {},
     results = { { type = "item", name = name, amount = 1 } },
+  }
+end
+
+local function fluid_recipe(name)
+  return {
+    type = "recipe",
+    name = name,
+    category = "crafting",
+    energy_required = 1,
+    ingredients = {},
+    results = { { type = "fluid", name = name, amount = 1 } },
   }
 end
 
@@ -113,13 +137,23 @@ data = {
                 ["b-basic-assembler"] = {},
                 lab = {},
                 ["flexible-furnace"] = {},
+                ["frugal-furnace"] = {},
+                ["nugget-furnace"] = {},
                 ["a-slow-assembler"] = {},
                 ["b-fast-assembler"] = {},
                 farm = {},
                 complex = {},
                 stone = {},
+                ore = {},
                 ["a-small-drill"] = {},
                 ["b-big-drill"] = {},
+                ["burner-drill"] = {},
+                ["choice-ore"] = {},
+                ["choice-drill"] = {},
+                ["shared-ore"] = {},
+                ["a-choice-drill"] = {},
+                ["b-nugget-drill"] = {},
+                ["gas-furnace"] = {},
                 ["a-small-pump"] = {},
                 ["b-big-pump"] = {},
                 tower = {},
@@ -132,6 +166,10 @@ data = {
     item = {
       wood = { type = "item", name = "wood", fuel_category = "chemical", fuel_value = "2MJ" },
       peat = { type = "item", name = "peat", fuel_category = "peat", fuel_value = "2MJ" },
+      -- As cheap to make as wood, but with 50 times the energy, so it costs far less than the flat price per MJ.
+      nugget = { type = "item", name = "nugget", fuel_category = "nugget", fuel_value = "100MJ" },
+      frugal = { type = "item", name = "frugal" },
+      nuggeted = { type = "item", name = "nuggeted" },
       mixed = { type = "item", name = "mixed" },
       pressed = { type = "item", name = "pressed" },
       ["locked-or-not"] = { type = "item", name = "locked-or-not" },
@@ -156,11 +194,18 @@ data = {
       farmed = { type = "item", name = "farmed" },
       complexed = { type = "item", name = "complexed" },
       stone = { type = "item", name = "stone" },
+      ore = { type = "item", name = "ore" },
+      ["choice-ore"] = { type = "item", name = "choice-ore" },
+      ["shared-ore"] = { type = "item", name = "shared-ore" },
+      gassed = { type = "item", name = "gassed" },
       seed = { type = "item", name = "seed", plant_result = "tree" },
       fruit = { type = "item", name = "fruit" },
     },
     fluid = {
       water = { type = "fluid", name = "water", default_temperature = 15 },
+      -- Two fuel fluids, which cost more than the flat price per MJ.
+      ["light-gas"] = { type = "fluid", name = "light-gas", default_temperature = 15, fuel_value = "1MJ" },
+      ["heavy-gas"] = { type = "fluid", name = "heavy-gas", default_temperature = 15, fuel_value = "1MJ" },
     },
     module = {
       -- Both farm modules need the pack, so neither is unlocked with the current milestones.
@@ -178,6 +223,9 @@ data = {
       dirty = free_recipe("dirty", "dirty"),
       heated = free_recipe("heated", "heated"),
       peat = free_recipe("peat", "crafting"),
+      nugget = free_recipe("nugget", "crafting"),
+      frugal = free_recipe("frugal", "frugal"),
+      nuggeted = free_recipe("nuggeted", "nuggeted"),
       ["base-assembler"] = free_recipe("base-assembler", "crafting"),
       mixed = free_recipe("mixed", "mixed"),
       pressed = free_recipe("pressed", "pressed"),
@@ -197,6 +245,9 @@ data = {
       ["fast-farm-module"] = locked_recipe("fast-farm-module", "crafting"),
       ["other-module"] = free_recipe("other-module", "crafting"),
       seed = free_recipe("seed", "crafting"),
+      ["light-gas"] = fluid_recipe("light-gas"),
+      ["heavy-gas"] = fluid_recipe("heavy-gas"),
+      gassed = free_recipe("gassed", "gassed"),
     },
     technology = {
       -- Researched with the pack, so these can be built, but not with the current milestones.
@@ -241,6 +292,9 @@ data = {
       ["a-variant-assembler"] = placed_by(crafter("a-variant-assembler", "varied", "1kW", { type = "void" }, 1), "base-assembler"),
       -- Burns wood or peat.
       ["flexible-furnace"] = crafter("flexible-furnace", "flexible", "500MW", { type = "burner", fuel_categories = { "chemical", "peat" } }),
+      -- Burns peat or nuggets, and only nuggets.
+      ["frugal-furnace"] = crafter("frugal-furnace", "frugal", "500MW", { type = "burner", fuel_categories = { "peat", "nugget" } }),
+      ["nugget-furnace"] = sized_burner("nugget-furnace", "nuggeted", "500MW", "nugget", 3),
       -- The slow assembler is 3 wide, the fast one 5 wide and twice as fast.
       ["a-slow-assembler"] = crafter("a-slow-assembler", "speedy", "1kW", { type = "void" }),
       ["b-fast-assembler"] = with_speed(crafter("b-fast-assembler", "speedy", "1kW", { type = "void" }, 5), 2),
@@ -250,6 +304,8 @@ data = {
       farm = needs_modules(crafter("farm", "farmed", "1kW", { type = "void" }), { "farm" }),
       -- Like Pyanodon's Reproductive Complex: accepts several module categories, so it has no default module.
       complex = needs_modules(crafter("complex", "complexed", "1kW", { type = "void" }), { "farm", "other" }),
+      -- Burns any fuel fluid, so it has a choice of light and heavy gas.
+      ["gas-furnace"] = crafter("gas-furnace", "gassed", "500MW", { type = "fluid", burns_fluid = true, fluid_box = { volume = 100 } }),
     },
     resource = {
       stone = {
@@ -259,11 +315,41 @@ data = {
         -- A density of 0 can't be estimated, so mining stone gets no extra penalty.
         autoplace = { probability_expression = 0 },
       },
+      -- A density of 1 is rare, so mining ore gets a penalty of 1 + ln(30).
+      ore = {
+        type = "resource",
+        name = "ore",
+        category = "rare-solid",
+        minable = { mining_time = 1, result = "ore" },
+        autoplace = { probability_expression = "resource_autoplace_all_patches{base_density = 1}" },
+      },
+      -- As rare as ore, but mined by a drill with a choice of fuels.
+      ["choice-ore"] = {
+        type = "resource",
+        name = "choice-ore",
+        category = "choice-solid",
+        minable = { mining_time = 1, result = "choice-ore" },
+        autoplace = { probability_expression = "resource_autoplace_all_patches{base_density = 1}" },
+      },
+      -- Mined by two drills that accept different fuels. A density of 0 gives no extra penalty.
+      ["shared-ore"] = {
+        type = "resource",
+        name = "shared-ore",
+        category = "shared-solid",
+        minable = { mining_time = 1, result = "shared-ore" },
+        autoplace = { probability_expression = 0 },
+      },
     },
     ["mining-drill"] = {
       -- The small drill is 2 wide and mines at half speed. The big drill is 5 wide and 4 times as fast.
       ["a-small-drill"] = drill("a-small-drill", 0.5, 2),
       ["b-big-drill"] = drill("b-big-drill", 2, 5),
+      -- Each uses 2 MJ per ore. The choice drill burns wood or peat, the a-choice drill peat or nuggets, and the nugget drill only nuggets.
+      ["choice-drill"] = burner_drill("choice-drill", "choice-solid", { "chemical", "peat" }),
+      ["a-choice-drill"] = burner_drill("a-choice-drill", "shared-solid", { "peat", "nugget" }),
+      ["b-nugget-drill"] = burner_drill("b-nugget-drill", "shared-solid", { "nugget" }),
+      -- Burns only wood, 2 MJ per ore, so it burns one wood for each ore it mines.
+      ["burner-drill"] = burner_drill("burner-drill", "rare-solid", { "chemical" }),
     },
     ["offshore-pump"] = {
       -- The small pump is 1 wide and pumps 1200 water per second. The big pump is 3 wide and twice as fast.
