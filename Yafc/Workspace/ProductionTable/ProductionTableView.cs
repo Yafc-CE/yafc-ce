@@ -183,7 +183,7 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                             .WithTooltip(imgui, LSs.ProductionTableCopyRowHint.L(ImGuiUtils.ScanToString(SDL.SDL_Scancode.SDL_SCANCODE_C)))
                             && imgui.CloseDropdown()) {
 
-                            RecipeRowClipboard.Copy(recipe);
+                            view.CopyRecipe(recipe);
                         }
 
                         if (imgui.BuildButton(LSs.ProductionTableCutRow)
@@ -1361,6 +1361,13 @@ goodsHaveNoProduction:;
         _ = recipe.owner.RecordUndo().recipes.Remove(recipe);
     }
 
+    private void CopyRecipe(RecipeRow recipe) {
+        if (RecipeRowClipboard.Copy(recipe)) {
+            flatHierarchyBuilder.Flash(recipe);
+            bodyContent.Rebuild();
+        }
+    }
+
     private void CutRecipe(RecipeRow recipe) {
         if (RecipeRowClipboard.Cut(recipe)) {
             RemoveRecipe(recipe);
@@ -1369,8 +1376,10 @@ goodsHaveNoProduction:;
     }
 
     private void PasteRecipe(ProductionTable table, int? index = null) {
-        RecipeRowClipboard.Paste(table, index);
-        Rebuild(); // Don't use the old positions of the rows before the change is committed.
+        if (RecipeRowClipboard.Paste(table, index) is RecipeRow recipe) {
+            flatHierarchyBuilder.Flash(recipe);
+            Rebuild(); // Don't use the old positions of the rows before the change is committed.
+        }
     }
 
     /// <summary>
@@ -1387,7 +1396,7 @@ goodsHaveNoProduction:;
         switch (code) {
             case SDL.SDL_Scancode.SDL_SCANCODE_C when row != null:
                 closeDropdown();
-                RecipeRowClipboard.Copy(row);
+                CopyRecipe(row);
                 break;
             case SDL.SDL_Scancode.SDL_SCANCODE_X when row != null:
                 closeDropdown();

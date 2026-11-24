@@ -33,6 +33,9 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
     private bool rebuildRequired;
     private readonly List<(float top, TRow row)> rowPositions = [];
     private float contentBottom;
+    private const long FlashDuration = 400; // milliseconds
+    private TRow? flashingRow;
+    private long flashEnd;
 
     public float width => grid.width;
     public void SetData(TGroup table) {
@@ -47,6 +50,14 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
     /// <param name="y">The position, in the coordinates of the <see cref="ImGui"/> that was passed to <see cref="Build"/>.</param>
     /// <returns>The row, or <see langword="null"/> if there is no row at that position, or the rows changed since they were drawn.</returns>
     public TRow? FindRowAt(float y) => rebuildRequired || y >= contentBottom ? null : rowPositions.FindLast(position => position.top <= y).row;
+
+    /// <summary>
+    /// Briefly light up a row, and the rows in its expanded group, to show the user that something happened to it. The caller must rebuild the gui.
+    /// </summary>
+    public void Flash(TRow row) {
+        flashingRow = row;
+        flashEnd = Ui.time + FlashDuration;
+    }
 
     private (TGroup?, int) FindDraggingRecipeParentAndIndex() {
         int index = flatRecipes.IndexOf(draggingRecipe);
@@ -132,12 +143,17 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
 
         if (gui.isBuilding) {
             rowPositions.Clear();
+
+            if (Ui.time >= flashEnd) {
+                flashingRow = null;
+            }
         }
 
         grid.BeginBuildingContent(gui);
         var bgColor = SchemeColor.PureBackground;
         int depth = 0;
         float depWidth = 0f;
+        bool isFlashing = false;
         for (int i = 0; i < flatRecipes.Count; i++) {
             var recipe = flatRecipes[i];
             var item = flatGroups[i];
@@ -179,6 +195,11 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
 
                 if (gui.isBuilding) {
                     rowPositions.Add((gui.statePosition.Y, recipe));
+
+                    if (recipe == flashingRow) {
+                        isFlashing = true;
+                        gui.SetNextRebuild(flashEnd);
+                    }
                 }
 
                 if (item != null) {
@@ -198,6 +219,12 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
                     else if (gui.ConsumeDrag(rect.Center, recipe)) {
                         // null-forgiving: currentDraggingObject is set to recipe (a non-null TRow, despite several checks for RecipeRow) by InitiateDrag
                         MoveFlatHierarchy(gui.GetDraggingObject<TRow>()!, recipe);
+                    }
+
+                    if (isFlashing) {
+                        // Rectangles are drawn below the earlier ones, so this must come before the highlighting.
+                        gui.DrawRectangle(rect, SchemeColor.PureForeground, drawTransparent: true);
+                        isFlashing = item != null || recipe != flashingRow; // Only an expanded group continues below its row.
                     }
 
                     if (nextRowIsHighlighted) {
@@ -221,6 +248,10 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
                 }
             }
             else {
+                if (item!.owner == flashingRow) { // null-forgiving: The construction of flatRows and flatGroups guarantees they aren't both null at the same index.
+                    isFlashing = false;
+                }
+
                 if (gui.isBuilding) {
                     float top = depthStart.Pop();
                     // set color bgColor if the row is a nested table and is not collapsed

@@ -12,16 +12,17 @@ internal static class RecipeRowClipboard {
     /// <summary>
     /// Put a copy of <paramref name="row"/> on the clipboard, without its row markers and built building counts, or show the user why this isn't possible.
     /// </summary>
-    public static void Copy(RecipeRow row) {
+    /// <returns><see langword="true"/> if the copy is on the clipboard.</returns>
+    public static bool Copy(RecipeRow row) {
         ErrorCollector collector = new();
         RecipeRow? copy = row.CopyAsUnbuilt(collector);
 
         if (copy == null || collector.severity > ErrorSeverity.None) {
             ErrorListPanel.Show(collector);
+            return false;
         }
-        else {
-            _ = SetClipboard(copy);
-        }
+
+        return SetClipboard(copy);
     }
 
     /// <summary>
@@ -41,13 +42,16 @@ internal static class RecipeRowClipboard {
     /// Add the row on the clipboard to <paramref name="table"/>, or show the user why this isn't possible.
     /// </summary>
     /// <param name="index">The index to insert the row at, or <see langword="null"/> to add it to the end of the table.</param>
-    public static void Paste(ProductionTable table, int? index = null) {
+    /// <returns>The added row, or <see langword="null"/> if nothing was added.</returns>
+    public static RecipeRow? Paste(ProductionTable table, int? index = null) {
         ErrorCollector collector = new();
-        table.PasteRecipeRow(SDL.SDL_GetClipboardText(), collector, index);
+        RecipeRow? row = table.PasteRecipeRow(SDL.SDL_GetClipboardText(), collector, index);
 
         if (collector.severity > ErrorSeverity.None) {
             ErrorListPanel.Show(collector);
         }
+
+        return row;
     }
 
     private static bool SetClipboard(RecipeRow row) {
