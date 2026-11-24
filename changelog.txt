@@ -55,6 +55,7 @@ Date:
         - Check IDE0052 in the CI format step, so unread private members fail the build check.
         - Ignore .vscode/launch.json, as launch configurations contain personal paths and settings.
         - Document the distinction between project settings and preferences.
+        - Detect deserialization for every loaded object, so loading a recipe row on its own no longer changes its fixed building count.
 ----------------------------------------------------------------------------------------------------------------------
 Version: 2.21.0
 Date: 25 October 2026
