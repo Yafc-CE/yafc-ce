@@ -30,6 +30,7 @@ Date:
         - Hold Ctrl in a recipe tooltip to see how its cost is broken down, including the building and fuel it is priced with, and also Shift to see that breakdown at the current milestones.
         - Add a page error when a page cannot be solved exactly. YAFC then ignores recipe costs, so all results on that page are unreliable.
         - Update an open tooltip when Ctrl or Shift is pressed or released, such as the object's type name that Ctrl shows, instead of only when the mouse moves to another object.
+        - Add buttons to copy, cut and paste a recipe or nested table, to move or duplicate it within a page, to another page, or to another project.
     Fixes:
         - Support prototype-stage JSON and string exports in mods. YAFC suppresses script-output file writes while continuing to load the mod.
         - Cost analysis: mining recipes in Factorio 2.0 were always penalized as if the resource was extremely rare. Mined resources are now considerably cheaper.

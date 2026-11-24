@@ -33,6 +33,38 @@ public class ShareStringTests {
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CopyAsUnbuilt_OnlyClearsMarkersAndBuiltCounts(bool nested) {
+        (RecipeRow source, _) = CreateRowAndTarget(nested);
+        string before = GetJson(source);
+
+        ErrorCollector collector = new();
+        int changes = 0;
+        ((ProjectPage)source.owner.owner).contentChanged += _ => changes++;
+
+        RecipeRow copy = source.CopyAsUnbuilt(collector);
+
+        Assert.Equal(ErrorSeverity.None, collector.severity);
+        Assert.Equal(0, changes);
+        Assert.Equal(before, GetJson(source));
+        Assert.Single(source.owner.recipes);
+        Assert.NotEqual(before, GetJson(copy));
+        Assert.All(Flatten(copy), row => {
+            Assert.Equal(0, row.tag);
+            Assert.Null(row.builtBuildings);
+        });
+
+        // After also clearing them in the source, there must be no differences left.
+        foreach (RecipeRow row in Flatten(source)) {
+            row.tag = 0;
+            row.builtBuildings = null;
+        }
+
+        Assert.Equal(GetJson(source), GetJson(copy));
+    }
+
     [Fact]
     public void CutAndPaste_CanBeUndoneAndRedone() {
         (RecipeRow source, ProductionTable target) = CreateRowAndTarget(true);
@@ -43,9 +75,9 @@ public class ShareStringTests {
 
         sourceTable.RecordUndo().recipes.Remove(source);
         undo.FlushPendingChanges();
-        RecipeRow pasted = ShareString.Decode<RecipeRow>(shareString, target, new ErrorCollector());
-        target.RecordUndo().recipes.Add(pasted);
+        target.PasteRecipeRow(shareString, new ErrorCollector());
         undo.FlushPendingChanges();
+        RecipeRow pasted = Assert.Single(target.recipes);
 
         undo.PerformUndo();
         Assert.Empty(sourceTable.recipes);
@@ -102,6 +134,60 @@ public class ShareStringTests {
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PasteRecipeRow_MissingRecipe_OnlyAddsRowWithNestedTable(bool nested) {
+        (RecipeRow source, ProductionTable target) = CreateRowAndTarget(nested);
+        string text = Decompress(ShareString.Encode(source)).Replace("!Recipe.recipe!", "!Recipe.from-another-mod!");
+        ErrorCollector collector = new();
+
+        target.PasteRecipeRow(Compress(text), collector);
+
+        if (nested) {
+            // The table can still be useful, so add it and only report what is missing, like when loading a project.
+            Assert.Null(Assert.Single(Assert.Single(target.recipes).subgroup.recipes).recipe);
+            Assert.Equal(ErrorSeverity.MinorDataLoss, collector.severity);
+        }
+        else {
+            Assert.Empty(target.recipes);
+            Assert.Equal(ErrorSeverity.Critical, collector.severity);
+            Assert.False(target.undo.HasChangesPending(target));
+        }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("Not a share string")]
+    public void PasteRecipeRow_InvalidText_AddsNothing(string text) {
+        (_, ProductionTable target) = CreateRowAndTarget(false);
+        ErrorCollector collector = new();
+
+        target.PasteRecipeRow(text, collector);
+
+        Assert.Empty(target.recipes);
+        Assert.Equal(ErrorSeverity.Critical, collector.severity);
+    }
+
+    [Fact]
+    public void Contains_OnlyAcceptsShareStringsOfTheRequestedType() {
+        (RecipeRow source, _) = CreateRowAndTarget(true);
+        string row = ShareString.Encode(source);
+        string page = ShareString.Encode((ProjectPage)source.owner.owner);
+
+        Assert.True(ShareString.Contains<RecipeRow>(row));
+        Assert.True(ShareString.Contains<RecipeRow>($" {row}\n"));
+        Assert.True(ShareString.Contains<RecipeRow>(string.Join("\r\n", row.Chunk(76).Select(line => new string(line)))));
+        Assert.True(ShareString.Contains<ProjectPage>(page));
+
+        Assert.False(ShareString.Contains<ProjectPage>(row));
+        Assert.False(ShareString.Contains<RecipeRow>(page));
+        Assert.False(ShareString.Contains<RecipeRow>(""));
+        Assert.False(ShareString.Contains<RecipeRow>("Not a share string"));
+        Assert.False(ShareString.Contains<RecipeRow>("ValidBase64+")); // but not valid compressed data
+        Assert.False(ShareString.Contains<RecipeRow>(row[..8]));
+    }
+
     /// <summary>
     /// Creates a marked row with a fixed product and modules (optionally, as part of a nested table) and an empty table on another page.
     /// </summary>
@@ -140,7 +226,18 @@ public class ShareStringTests {
         return (sourceTable.recipes.Single(), (ProductionTable)targetPage.content);
     }
 
+    private static RecipeRow[] Flatten(RecipeRow row) => [row, .. row.subgroup?.GetAllRecipes() ?? []];
+
     private static string GetJson(RecipeRow row) => Encoding.UTF8.GetString(JsonUtils.SaveToJson(row).ToArray());
+
+    private static string Compress(string text) {
+        using MemoryStream target = new();
+        using (DeflateStream stream = new(target, CompressionLevel.Optimal, true)) {
+            stream.Write(Encoding.UTF8.GetBytes(text));
+        }
+
+        return Convert.ToBase64String(target.ToArray());
+    }
 
     private static string Decompress(string shareString) {
         using DeflateStream stream = new(new MemoryStream(Convert.FromBase64String(shareString)), CompressionMode.Decompress);

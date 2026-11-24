@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Text;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -25,6 +26,28 @@ public static class ShareString {
         }
 
         return Convert.ToBase64String(targetStream.GetBuffer(), 0, (int)targetStream.Length);
+    }
+
+    /// <summary>
+    /// Returns <see langword="true"/> if <paramref name="text"/> is a share string that contains a <typeparamref name="T"/>. This decodes the text, but
+    /// only decompresses the start of the header, so <see cref="Decode"/> can still fail.
+    /// </summary>
+    public static bool Contains<T>(string text) where T : ModelObject {
+        if (!Base64.IsValid(text)) {
+            // Most text is rejected here, at its first invalid character, before allocating anything.
+            return false;
+        }
+
+        try {
+            using DeflateStream stream = new DeflateStream(new MemoryStream(Convert.FromBase64String(text)), CompressionMode.Decompress);
+            byte[] expected = Encoding.UTF8.GetBytes($"YAFC\n{typeof(T).Name}\n");
+            byte[] actual = new byte[expected.Length];
+
+            return stream.ReadAtLeast(actual, actual.Length, false) == actual.Length && actual.AsSpan().SequenceEqual(expected);
+        }
+        catch (InvalidDataException) {
+            return false;
+        }
     }
 
     /// <summary>

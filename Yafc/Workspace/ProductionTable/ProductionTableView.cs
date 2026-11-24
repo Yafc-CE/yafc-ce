@@ -134,6 +134,8 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
     }
 
     private class RecipeColumn(ProductionTableView view) : ProductionTableDataColumn(view, LSs.ProductionTableHeaderRecipe, 13f, 13f, 30f, widthStorage: nameof(Preferences.recipeColumnWidth)) {
+        private bool canPasteFromMenu;
+
         public override void BuildElement(ImGui gui, RecipeRow recipe) {
             gui.spacing = 0.5f;
             IFactorioObjectWrapper? display = (IFactorioObjectWrapper?)recipe.recipe ?? recipe.icon;
@@ -141,6 +143,8 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
 
             switch (gui.BuildFactorioObjectButton(display, ButtonDisplayStyle.ProductionTableUnscaled, tooltip)) {
                 case Click.Left:
+                    bool canPaste = recipe.subgroup != null && RecipeRowClipboard.CanPaste();
+
                     gui.ShowDropDown(delegate (ImGui imgui) {
                         DrawRecipeTagSelect(imgui, recipe);
 
@@ -175,6 +179,20 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                             view.BuildShoppingList(recipe);
                         }
 
+                        if (imgui.BuildButton(LSs.ProductionTableCopyRow).WithTooltip(imgui, LSs.ProductionTableCopyRowHint) && imgui.CloseDropdown()) {
+                            RecipeRowClipboard.Copy(recipe);
+                        }
+
+                        if (imgui.BuildButton(LSs.ProductionTableCutRow).WithTooltip(imgui, LSs.ProductionTableCutRowHint) && imgui.CloseDropdown()
+                            && RecipeRowClipboard.Cut(recipe)) {
+
+                            removeRecipe();
+                        }
+
+                        if (recipe.subgroup != null) {
+                            BuildPasteButton(imgui, recipe.subgroup, canPaste);
+                        }
+
                         if (recipe.recipe != null && imgui.BuildCheckBox(LSs.ProductionTableShowTotalIo, recipe.showTotalIO, out bool newShowTotalIO)) {
                             recipe.RecordUndo().showTotalIO = newShowTotalIO;
                         }
@@ -188,13 +206,11 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                         }
 
                         if (recipe.subgroup != null && imgui.BuildRedButton(LSs.ProductionTableDeleteNested).WithTooltip(imgui, recipe.subgroup.expanded ? LSs.ProductionTableShortcutCollapseAndRightClick : LSs.ProductionTableShortcutRightClick) && imgui.CloseDropdown()) {
-                            view._focusManager.CancelFocus(recipe);
-                            _ = recipe.owner.RecordUndo().recipes.Remove(recipe);
+                            removeRecipe();
                         }
 
                         if (recipe.subgroup == null && imgui.BuildRedButton(LSs.ProductionTableDeleteRecipe).WithTooltip(imgui, LSs.ProductionTableShortcutRightClick) && imgui.CloseDropdown()) {
-                            view._focusManager.CancelFocus(recipe);
-                            _ = recipe.owner.RecordUndo().recipes.Remove(recipe);
+                            removeRecipe();
                         }
                     }, 25);
                     break;
@@ -202,8 +218,7 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                     unpackNestedTable();
                     break;
                 case Click.Right: // With collapsed or no subgroup
-                    view._focusManager.CancelFocus(recipe);
-                    _ = recipe.owner.RecordUndo().recipes.Remove(recipe);
+                    removeRecipe();
                     break;
             }
 
@@ -218,6 +233,11 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
             }
 
             gui.BuildText(recipe.recipe?.target.locName ?? recipe.description, recipe.recipe != null || recipe.isOverviewMode ? TextBlockDisplayStyle.WrappedText : TextBlockDisplayStyle.Default());
+
+            void removeRecipe() {
+                view._focusManager.CancelFocus(recipe);
+                _ = recipe.owner.RecordUndo().recipes.Remove(recipe);
+            }
 
             void unpackNestedTable() {
                 var evacuate = recipe.subgroup.recipes;
@@ -243,6 +263,8 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
             }
         }
 
+        protected override void MenuOpening() => canPasteFromMenu = RecipeRowClipboard.CanPaste();
+
         public override void BuildMenu(ImGui gui) {
             var model = view.model;
 
@@ -252,6 +274,7 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                 RemoveZeroRecipes(model);
             }
 
+            BuildPasteButton(gui, model, canPasteFromMenu);
             gui.BuildText(LSs.ProductionTableExportToBlueprint, TextBlockDisplayStyle.WrappedText);
             using (gui.EnterRow()) {
                 gui.BuildText(LSs.ExportBlueprintAmountPer);
@@ -327,6 +350,17 @@ goodsHaveNoProduction:;
                     newRow.subgroup = new(newRow);
                     table.RecordUndo().recipes.Add(newRow);
                 });
+            }
+        }
+
+        /// <summary>
+        /// Build the "Paste" button and handle its click.
+        /// </summary>
+        /// <param name="table">The table that will receive the pasted row</param>
+        /// <param name="canPaste">If <see langword="true"/>, there was a recipe row on the clipboard when the menu was opened, so the button is active</param>
+        private static void BuildPasteButton(ImGui gui, ProductionTable table, bool canPaste) {
+            if (gui.BuildButton(LSs.ProductionTablePasteRow, active: canPaste).WithTooltip(gui, LSs.ProductionTablePasteRowHint) && gui.CloseDropdown()) {
+                RecipeRowClipboard.Paste(table);
             }
         }
 

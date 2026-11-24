@@ -296,6 +296,23 @@ match:
         recipeRow.AutoApplySingleCategoryModule();
     }
 
+    /// <summary>
+    /// Add the recipe row in a share string to the end of this table. Nothing is added if the string does not contain a row, or if the row would be
+    /// blank because its recipe does not exist in this project.
+    /// </summary>
+    /// <param name="shareString">The text to load, which does not need to be a valid share string.</param>
+    /// <param name="collector">Receives all problems that occurred while loading the row.</param>
+    public void PasteRecipeRow(string shareString, ErrorCollector collector) {
+        RecipeRow? row = ShareString.Decode<RecipeRow>(shareString, this, collector);
+
+        if (row is { recipe: null, subgroup: null, description: null, icon: null }) {
+            collector.Error(LSs.ProductionTablePasteRowMissingRecipe, ErrorSeverity.Critical);
+        }
+        else if (row != null) {
+            this.RecordUndo().recipes.Add(row);
+        }
+    }
+
     private static EntityCrafter? GetSelectedFuelCrafter(RecipeOrTechnology recipe, IObjectWithQuality<Goods>? selectedFuel) =>
         selectedFuel?.target.fuelFor.OfType<EntityCrafter>()
             .Where(e => e.recipes.Contains(recipe))
