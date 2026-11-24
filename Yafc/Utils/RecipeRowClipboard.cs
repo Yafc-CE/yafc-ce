@@ -33,16 +33,17 @@ internal static class RecipeRowClipboard {
 
     /// <summary>
     /// Returns <see langword="true"/> if there is a row on the clipboard. This can be slow, because it may have to request the text from another
-    /// application, so call it when opening a menu and not while drawing it.
+    /// application, so call it for a key press or when opening a menu, and not while drawing.
     /// </summary>
     public static bool CanPaste() => ImGuiUtils.HasClipboardText() && ShareString.Contains<RecipeRow>(SDL.SDL_GetClipboardText());
 
     /// <summary>
-    /// Add the row on the clipboard to the end of <paramref name="table"/>, or show the user why this isn't possible.
+    /// Add the row on the clipboard to <paramref name="table"/>, or show the user why this isn't possible.
     /// </summary>
-    public static void Paste(ProductionTable table) {
+    /// <param name="index">The index to insert the row at, or <see langword="null"/> to add it to the end of the table.</param>
+    public static void Paste(ProductionTable table, int? index = null) {
         ErrorCollector collector = new();
-        table.PasteRecipeRow(SDL.SDL_GetClipboardText(), collector);
+        table.PasteRecipeRow(SDL.SDL_GetClipboardText(), collector, index);
 
         if (collector.severity > ErrorSeverity.None) {
             ErrorListPanel.Show(collector);

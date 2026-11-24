@@ -157,6 +157,33 @@ public class ShareStringTests {
     }
 
     [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void PasteRecipeRow_AtPositionBelow_IsShownDirectlyBelow(bool nested, bool expanded) {
+        (RecipeRow source, ProductionTable target) = CreateRowAndTarget(nested);
+        RecipeRow first = new(target) { description = "First" }, last = new(target) { description = "Last" };
+        target.recipes.Add(first);
+        target.recipes.Add(source);
+        target.recipes.Add(last);
+        source.SetOwner(target);
+        if (nested) {
+            source.subgroup.expanded = expanded;
+        }
+
+        (ProductionTable table, int index) = source.GetPositionBelow();
+        table.PasteRecipeRow(ShareString.Encode(first), new ErrorCollector(), index);
+
+        if (expanded) {
+            Assert.Equal([first, source, last], target.recipes);
+            Assert.Equal(["First", null], source.subgroup.recipes.Select(r => r.description));
+        }
+        else {
+            Assert.Equal(["First", source.description, "First", "Last"], target.recipes.Select(r => r.description));
+        }
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("Not a share string")]
     public void PasteRecipeRow_InvalidText_AddsNothing(string text) {

@@ -595,6 +595,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
     public bool KeyDown(SDL.SDL_Keysym key) {
         bool ctrl = (key.mod & SDL.SDL_Keymod.KMOD_CTRL) != 0;
         bool shift = (key.mod & SDL.SDL_Keymod.KMOD_SHIFT) != 0;
+        bool alt = (key.mod & SDL.SDL_Keymod.KMOD_ALT) != 0; // Windows reports AltGr as Ctrl+Alt
         if (ctrl) {
             switch (key.scancode) {
                 case SDL.SDL_Scancode.SDL_SCANCODE_S:
@@ -643,8 +644,10 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
                     }
                     break;
                 default:
-                    if (_activePageView?.ControlKey(key.scancode) != true) {
-                        _ = (secondaryPageView?.ControlKey(key.scancode));
+                    if (!shift && !alt) {
+                        // The secondary page only gets the key if the mouse is over it.
+                        ProjectPageView? view = secondaryPageView?.isMouseOver == true ? secondaryPageView : _activePageView;
+                        view?.ControlKey(key.scancode);
                     }
                     break;
             }

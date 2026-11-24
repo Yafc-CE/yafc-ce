@@ -637,6 +637,13 @@ public sealed class RecipeRow : ModelObject<ProductionTable>, IGroupedElement<Pr
     public void SetOwner(ProductionTable parent) => owner = parent;
 
     /// <summary>
+    /// Get the table and index where a row must be inserted to be shown directly below this row. If this row has an expanded nested table, that is the
+    /// start of the nested table.
+    /// </summary>
+    public (ProductionTable table, int index) GetPositionBelow()
+        => subgroup is { expanded: true } ? (subgroup, 0) : (owner, owner.recipes.IndexOf(this) + 1);
+
+    /// <summary>
     /// Create a copy of this row, including its nested table, without the information about what the user already built: the row markers
     /// (<see cref="tag"/>) and <see cref="builtBuildings"/>.
     /// </summary>

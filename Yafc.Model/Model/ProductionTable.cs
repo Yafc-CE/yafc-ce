@@ -297,19 +297,20 @@ match:
     }
 
     /// <summary>
-    /// Add the recipe row in a share string to the end of this table. Nothing is added if the string does not contain a row, or if the row would be
-    /// blank because its recipe does not exist in this project.
+    /// Add the recipe row in a share string to this table. Nothing is added if the string does not contain a row, or if the row would be blank because
+    /// its recipe does not exist in this project.
     /// </summary>
     /// <param name="shareString">The text to load, which does not need to be a valid share string.</param>
     /// <param name="collector">Receives all problems that occurred while loading the row.</param>
-    public void PasteRecipeRow(string shareString, ErrorCollector collector) {
+    /// <param name="index">The index to insert the row at, or <see langword="null"/> to add it to the end of this table.</param>
+    public void PasteRecipeRow(string shareString, ErrorCollector collector, int? index = null) {
         RecipeRow? row = ShareString.Decode<RecipeRow>(shareString, this, collector);
 
         if (row is { recipe: null, subgroup: null, description: null, icon: null }) {
             collector.Error(LSs.ProductionTablePasteRowMissingRecipe, ErrorSeverity.Critical);
         }
         else if (row != null) {
-            this.RecordUndo().recipes.Add(row);
+            this.RecordUndo().recipes.Insert(index ?? recipes.Count, row);
         }
     }
 

@@ -31,12 +31,22 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
     private TRow? draggingRecipe;
     private TGroup root = null!; // null-forgiving: root is set by SetData whenever the selected page is set or the chevrons are clicked.
     private bool rebuildRequired;
+    private readonly List<(float top, TRow row)> rowPositions = [];
+    private float contentBottom;
 
     public float width => grid.width;
     public void SetData(TGroup table) {
         root = table;
         rebuildRequired = true;
     }
+
+    /// <summary>
+    /// Find the row that is drawn at vertical position <paramref name="y"/>. The header of an expanded group (e.g. the summary of a nested table)
+    /// is part of the row of that group.
+    /// </summary>
+    /// <param name="y">The position, in the coordinates of the <see cref="ImGui"/> that was passed to <see cref="Build"/>.</param>
+    /// <returns>The row, or <see langword="null"/> if there is no row at that position, or the rows changed since they were drawn.</returns>
+    public TRow? FindRowAt(float y) => rebuildRequired || y >= contentBottom ? null : rowPositions.FindLast(position => position.top <= y).row;
 
     private (TGroup?, int) FindDraggingRecipeParentAndIndex() {
         int index = flatRecipes.IndexOf(draggingRecipe);
@@ -120,6 +130,10 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
             Rebuild();
         }
 
+        if (gui.isBuilding) {
+            rowPositions.Clear();
+        }
+
         grid.BeginBuildingContent(gui);
         var bgColor = SchemeColor.PureBackground;
         int depth = 0;
@@ -161,6 +175,10 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
                     }
 
                     continue;
+                }
+
+                if (gui.isBuilding) {
+                    rowPositions.Add((gui.statePosition.Y, recipe));
                 }
 
                 if (item != null) {
@@ -215,6 +233,7 @@ public class FlatHierarchy<TRow, TGroup>(DataGrid<TRow> grid, Action<ImGui, TGro
             }
         }
         var fullRect = grid.EndBuildingContent(gui);
+        contentBottom = fullRect.Bottom;
         gui.DrawRectangle(fullRect, SchemeColor.PureBackground);
     }
 

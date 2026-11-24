@@ -179,14 +179,18 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                             view.BuildShoppingList(recipe);
                         }
 
-                        if (imgui.BuildButton(LSs.ProductionTableCopyRow).WithTooltip(imgui, LSs.ProductionTableCopyRowHint) && imgui.CloseDropdown()) {
+                        if (imgui.BuildButton(LSs.ProductionTableCopyRow)
+                            .WithTooltip(imgui, LSs.ProductionTableCopyRowHint.L(ImGuiUtils.ScanToString(SDL.SDL_Scancode.SDL_SCANCODE_C)))
+                            && imgui.CloseDropdown()) {
+
                             RecipeRowClipboard.Copy(recipe);
                         }
 
-                        if (imgui.BuildButton(LSs.ProductionTableCutRow).WithTooltip(imgui, LSs.ProductionTableCutRowHint) && imgui.CloseDropdown()
-                            && RecipeRowClipboard.Cut(recipe)) {
+                        if (imgui.BuildButton(LSs.ProductionTableCutRow)
+                            .WithTooltip(imgui, LSs.ProductionTableCutRowHint.L(ImGuiUtils.ScanToString(SDL.SDL_Scancode.SDL_SCANCODE_X)))
+                            && imgui.CloseDropdown()) {
 
-                            removeRecipe();
+                            view.CutRecipe(recipe);
                         }
 
                         if (recipe.subgroup != null) {
@@ -206,11 +210,11 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                         }
 
                         if (recipe.subgroup != null && imgui.BuildRedButton(LSs.ProductionTableDeleteNested).WithTooltip(imgui, recipe.subgroup.expanded ? LSs.ProductionTableShortcutCollapseAndRightClick : LSs.ProductionTableShortcutRightClick) && imgui.CloseDropdown()) {
-                            removeRecipe();
+                            view.RemoveRecipe(recipe);
                         }
 
                         if (recipe.subgroup == null && imgui.BuildRedButton(LSs.ProductionTableDeleteRecipe).WithTooltip(imgui, LSs.ProductionTableShortcutRightClick) && imgui.CloseDropdown()) {
-                            removeRecipe();
+                            view.RemoveRecipe(recipe);
                         }
                     }, 25);
                     break;
@@ -218,7 +222,7 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                     unpackNestedTable();
                     break;
                 case Click.Right: // With collapsed or no subgroup
-                    removeRecipe();
+                    view.RemoveRecipe(recipe);
                     break;
             }
 
@@ -233,11 +237,6 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
             }
 
             gui.BuildText(recipe.recipe?.target.locName ?? recipe.description, recipe.recipe != null || recipe.isOverviewMode ? TextBlockDisplayStyle.WrappedText : TextBlockDisplayStyle.Default());
-
-            void removeRecipe() {
-                view._focusManager.CancelFocus(recipe);
-                _ = recipe.owner.RecordUndo().recipes.Remove(recipe);
-            }
 
             void unpackNestedTable() {
                 var evacuate = recipe.subgroup.recipes;
@@ -358,9 +357,12 @@ goodsHaveNoProduction:;
         /// </summary>
         /// <param name="table">The table that will receive the pasted row</param>
         /// <param name="canPaste">If <see langword="true"/>, there was a recipe row on the clipboard when the menu was opened, so the button is active</param>
-        private static void BuildPasteButton(ImGui gui, ProductionTable table, bool canPaste) {
-            if (gui.BuildButton(LSs.ProductionTablePasteRow, active: canPaste).WithTooltip(gui, LSs.ProductionTablePasteRowHint) && gui.CloseDropdown()) {
-                RecipeRowClipboard.Paste(table);
+        private void BuildPasteButton(ImGui gui, ProductionTable table, bool canPaste) {
+            if (gui.BuildButton(LSs.ProductionTablePasteRow, active: canPaste)
+                .WithTooltip(gui, LSs.ProductionTablePasteRowHint.L(ImGuiUtils.ScanToString(SDL.SDL_Scancode.SDL_SCANCODE_V)))
+                && gui.CloseDropdown()) {
+
+                view.PasteRecipe(table);
             }
         }
 
@@ -1352,6 +1354,54 @@ goodsHaveNoProduction:;
     public override void Rebuild(bool visualOnly = false) {
         flatHierarchyBuilder.SetData(model);
         base.Rebuild(visualOnly);
+    }
+
+    private void RemoveRecipe(RecipeRow recipe) {
+        _focusManager.CancelFocus(recipe);
+        _ = recipe.owner.RecordUndo().recipes.Remove(recipe);
+    }
+
+    private void CutRecipe(RecipeRow recipe) {
+        if (RecipeRowClipboard.Cut(recipe)) {
+            RemoveRecipe(recipe);
+            Rebuild(); // Don't find this row again before the change is committed.
+        }
+    }
+
+    private void PasteRecipe(ProductionTable table, int? index = null) {
+        RecipeRowClipboard.Paste(table, index);
+        Rebuild(); // Don't use the old positions of the rows before the change is committed.
+    }
+
+    /// <summary>
+    /// Handles the shortcuts to copy, cut and paste recipe rows. Copy and cut use the row under the mouse. Paste adds the row directly below the row
+    /// under the mouse, or at the end of the page if the mouse is not over a row.
+    /// </summary>
+    public override void ControlKey(SDL.SDL_Scancode code) {
+        if (model == null || bodyContent.isDragging || InputSystem.Instance.isKeyRepeat) {
+            return;
+        }
+
+        RecipeRow? row = InputSystem.Instance.HitTest() == bodyContent ? flatHierarchyBuilder.FindRowAt(bodyContent.mousePosition.Y) : null;
+
+        switch (code) {
+            case SDL.SDL_Scancode.SDL_SCANCODE_C when row != null:
+                closeDropdown();
+                RecipeRowClipboard.Copy(row);
+                break;
+            case SDL.SDL_Scancode.SDL_SCANCODE_X when row != null:
+                closeDropdown();
+                CutRecipe(row);
+                break;
+            case SDL.SDL_Scancode.SDL_SCANCODE_V when RecipeRowClipboard.CanPaste():
+                closeDropdown();
+                (ProductionTable table, int index) = row?.GetPositionBelow() ?? (model, model.recipes.Count);
+                PasteRecipe(table, index);
+                break;
+        }
+
+        // Dropdowns stay open until the mouse is clicked elsewhere, but an open one could be for a row that is being removed or moved.
+        static void closeDropdown() => InputSystem.Instance.SetMouseFocus(null);
     }
 
     /// <param name="recipe">If not <see langword="null"/>, this icon is directly associated with this <see cref="RecipeRow"/>.

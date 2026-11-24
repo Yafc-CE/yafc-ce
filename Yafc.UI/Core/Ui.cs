@@ -109,7 +109,7 @@ public static partial class Ui {
                         inputSystem.MouseMove(evt.motion.x, evt.motion.y);
                         break;
                     case SDL.SDL_EventType.SDL_KEYDOWN:
-                        inputSystem.KeyDown(evt.key.keysym);
+                        inputSystem.KeyDown(evt.key.keysym, evt.key.repeat != 0);
                         break;
                     case SDL.SDL_EventType.SDL_KEYUP:
                         inputSystem.KeyUp(evt.key.keysym);
