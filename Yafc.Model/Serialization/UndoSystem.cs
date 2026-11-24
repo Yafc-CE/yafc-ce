@@ -66,7 +66,9 @@ public class UndoSystem {
         changedList.Add(target);
         target.objectVersion = version;
 
-        if (visualOnly && undo.Count > 0 && undo.Peek().Contains(target)) {
+        // Merge visual changes into the previous batch, unless they belong to a batch that is not on the undo stack yet. For example, the solver
+        // removes unused links while the change that made them unused is being committed, and undoing that change must also restore the links.
+        if (visualOnly && currentUndoBatch.Count == 0 && undo.Count > 0 && undo.Peek().Contains(target)) {
             if (shouldSchedule) {
                 Schedule();
             }

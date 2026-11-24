@@ -51,6 +51,37 @@ public class ProductionTableTests {
     }
 
     [Fact]
+    public void UndoRemovingNestedRow_RestoresParentLinkRemovedBySolver() {
+        Project project = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Model.ProductionTableContentTests.lua");
+        ProjectPage page = new(project, typeof(ProductionTable));
+        project.pages.Add(page);
+        ProductionTable table = (ProductionTable)page.content;
+        RecipeRow header = new(table);
+        header.subgroup = new ProductionTable(header);
+        table.recipes.Add(header);
+        ProductionTable nested = header.subgroup;
+        nested.AddRecipe(Database.recipes.all.Single(r => r.name == "recipe").With(Quality.Normal), DataUtils.DeterministicComparer);
+        RecipeRow row = Assert.Single(nested.recipes);
+        page.SetActive(); // Only active pages are solved when they change.
+        project.undo.FlushPendingChanges();
+
+        // The undo batch before the removal must include the parent table.
+        Assert.True(table.CreateLink(row.recipe.target.products[0].goods.With(Quality.Normal)));
+        project.undo.FlushPendingChanges();
+        ProductionLink link = Assert.Single(table.links);
+
+        _ = nested.RecordUndo().recipes.Remove(row);
+        project.undo.FlushPendingChanges();
+        Assert.Empty(table.links); // The solver removed the link, because nothing uses it anymore.
+
+        project.undo.PerformUndo();
+
+        Assert.Same(row, Assert.Single(nested.recipes));
+        Assert.Same(link, Assert.Single(table.links));
+        Assert.Same(link, table.linkMap[link.goods]);
+    }
+
+    [Fact]
     public async Task Solve_UsesProjectThreadSwitcher_ForInfeasibleLink() {
         Project project = LuaDependentTestHelper.GetProjectForLua(InfeasibleLinkLua);
         CountingModelThreadSwitcher switcher = new();
