@@ -106,6 +106,39 @@ public class UndoSystemTests {
         Assert.Equal("flushed", project.yafcVersion);
     }
 
+    [Fact]
+    public void VisualOnlyChange_WithPendingChanges_IsUndoneWithThosePendingChanges() {
+        var project = new Project(new ImmediateUndoBatchScheduler());
+        project.settings.RecordUndo().miningProductivity = 1f;
+        project.undo.FlushPendingChanges();
+
+        project.RecordUndo().yafcVersion = "changed";
+        project.settings.RecordUndo(true).miningProductivity = 2f;
+        project.undo.FlushPendingChanges();
+
+        project.undo.PerformUndo();
+        Assert.Null(project.yafcVersion);
+        Assert.Equal(1f, project.settings.miningProductivity);
+
+        project.undo.PerformRedo();
+        Assert.Equal("changed", project.yafcVersion);
+        Assert.Equal(2f, project.settings.miningProductivity);
+    }
+
+    [Fact]
+    public void VisualOnlyChange_WithoutPendingChanges_IsMergedIntoPreviousBatch() {
+        var project = new Project(new ImmediateUndoBatchScheduler());
+        project.settings.RecordUndo().miningProductivity = 1f;
+        project.undo.FlushPendingChanges();
+
+        project.settings.RecordUndo(true).miningProductivity = 2f;
+        project.undo.FlushPendingChanges();
+
+        project.undo.PerformUndo();
+        Assert.Equal(0f, project.settings.miningProductivity);
+        Assert.False(project.undo.CanUndo);
+    }
+
     private sealed class DeferredUndoBatchScheduler : IUndoBatchScheduler {
         private readonly Queue<Action> callbacks = [];
 
