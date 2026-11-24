@@ -247,6 +247,11 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
             var model = view.model;
 
             BuildRecipeButtons(gui, model);
+
+            if (gui.BuildButton(LSs.ProductionTableRemoveZeroBuildingRecipes) && gui.CloseDropdown()) {
+                RemoveZeroRecipes(model);
+            }
+
             gui.BuildText(LSs.ProductionTableExportToBlueprint, TextBlockDisplayStyle.WrappedText);
             using (gui.EnterRow()) {
                 gui.BuildText(LSs.ExportBlueprintAmountPer);
@@ -262,10 +267,6 @@ public class ProductionTableView : ProjectPageView<ProductionTable> {
                 if (gui.BuildLink(LSs.ExportBlueprintAmountPerHour) && gui.CloseDropdown()) {
                     ExportIo(3600f);
                 }
-            }
-
-            if (gui.BuildButton(LSs.ProductionTableRemoveZeroBuildingRecipes) && gui.CloseDropdown()) {
-                RemoveZeroRecipes(model);
             }
 
             if (gui.BuildRedButton(LSs.ProductionTableClearRecipes) && gui.CloseDropdown()) {
