@@ -21,7 +21,7 @@ public struct ProductionTableFlow(IObjectWithQuality<Goods> goods, float amount,
 [DeserializeWithNonPublicConstructor]
 public sealed partial class ProductionTable : ProjectPageContents, IComparer<ProductionTableFlow>, IElementGroup<RecipeRow> {
     private static readonly ILogger logger = Logging.GetLogger<ProductionTable>();
-    private readonly ProductionTable rootTable;
+    private ProductionTable rootTable => owner is RecipeRow row ? row.owner.rootTable : this;
     [SkipSerialization] public Dictionary<IObjectWithQuality<Goods>, IProductionLink> linkMap { get; } = [];
     List<RecipeRow> IElementGroup<RecipeRow>.elements => recipes;
     [NoUndo]
@@ -56,23 +56,16 @@ public sealed partial class ProductionTable : ProjectPageContents, IComparer<Pro
 
     // For deserialization
     private ProductionTable(ModelObject owner) : base(owner) {
-        if (owner is RecipeRow row) {
-            rootTable = row.owner.rootTable;
-        }
-        else {
+        if (owner is not RecipeRow) {
             modules = new ModuleFillerParameters(this);
-            rootTable = this;
         }
     }
 
     // For the ProjectPage constructor
-    public ProductionTable(ProjectPage owner) : base(owner) {
-        modules = new ModuleFillerParameters(this);
-        rootTable = this;
-    }
+    public ProductionTable(ProjectPage owner) : base(owner) => modules = new ModuleFillerParameters(this);
 
     // For creating nested tables
-    public ProductionTable(RecipeRow owner) : base(owner) => rootTable = owner.owner.rootTable;
+    public ProductionTable(RecipeRow owner) : base(owner) { }
 
     protected internal override void ThisChanged(bool visualOnly) {
         RebuildLinkMap();
@@ -301,6 +294,23 @@ match:
 
         recipeRow.AutoApplyModuleTemplate(Project.current.sharedModuleTemplates);
         recipeRow.AutoApplySingleCategoryModule();
+    }
+
+    /// <summary>
+    /// Add the recipe row in a share string to the end of this table. Nothing is added if the string does not contain a row, or if the row would be
+    /// blank because its recipe does not exist in this project.
+    /// </summary>
+    /// <param name="shareString">The text to load, which does not need to be a valid share string.</param>
+    /// <param name="collector">Receives all problems that occurred while loading the row.</param>
+    public void PasteRecipeRow(string shareString, ErrorCollector collector) {
+        RecipeRow? row = ShareString.Decode<RecipeRow>(shareString, this, collector);
+
+        if (row is { recipe: null, subgroup: null, description: null, icon: null }) {
+            collector.Error(LSs.ProductionTablePasteRowMissingRecipe, ErrorSeverity.Critical);
+        }
+        else if (row != null) {
+            this.RecordUndo().recipes.Add(row);
+        }
     }
 
     private static EntityCrafter? GetSelectedFuelCrafter(RecipeOrTechnology recipe, IObjectWithQuality<Goods>? selectedFuel) =>

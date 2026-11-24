@@ -30,6 +30,7 @@ Date:
         - Hold Ctrl in a recipe tooltip to see how its cost is broken down, including the building and fuel it is priced with, and also Shift to see that breakdown at the current milestones.
         - Add a page error when a page cannot be solved exactly. YAFC then ignores recipe costs, so all results on that page are unreliable.
         - Update an open tooltip when Ctrl or Shift is pressed or released, such as the object's type name that Ctrl shows, instead of only when the mouse moves to another object.
+        - Add buttons to copy, cut and paste a recipe or nested table, to move or duplicate it within a page, to another page, or to another project.
     Fixes:
         - Support prototype-stage JSON and string exports in mods. YAFC suppresses script-output file writes while continuing to load the mod.
         - Cost analysis: mining recipes in Factorio 2.0 were always penalized as if the resource was extremely rare. Mined resources are now considerably cheaper.
@@ -57,6 +58,8 @@ Date:
         - Check IDE0052 in the CI format step, so unread private members fail the build check.
         - Ignore .vscode/launch.json, as launch configurations contain personal paths and settings.
         - Document the distinction between project settings and preferences.
+        - Detect deserialization for every loaded object, so loading a recipe row on its own no longer changes its fixed building count.
+        - Look up the root table of nested production tables instead of storing it, so it cannot become outdated.
 ----------------------------------------------------------------------------------------------------------------------
 Version: 2.21.0
 Date: 25 October 2026

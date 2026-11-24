@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -132,19 +131,7 @@ public class ProjectPageSettingsPanel : PseudoScreen {
 
         if (editingPage.guid != MainScreen.SummaryGuid && gui.BuildContextMenuButton(LSs.ExportPageToClipboard)) {
             _ = gui.CloseDropdown();
-            var data = JsonUtils.SaveToJson(editingPage);
-            using MemoryStream targetStream = new MemoryStream();
-            using (DeflateStream compress = new DeflateStream(targetStream, CompressionLevel.Optimal, true)) {
-                using (BinaryWriter writer = new BinaryWriter(compress, Encoding.UTF8, true)) {
-                    // write some magic chars and version as a marker
-                    writer.Write("YAFC\nProjectPage\n".AsSpan());
-                    writer.Write(YafcLib.version.ToString().AsSpan());
-                    writer.Write("\n\n\n".AsSpan());
-                }
-                data.CopyTo(compress);
-            }
-            string encoded = Convert.ToBase64String(targetStream.GetBuffer(), 0, (int)targetStream.Length);
-            _ = SDL.SDL_SetClipboardText(encoded);
+            _ = SDL.SDL_SetClipboardText(ShareString.Encode(editingPage));
         }
 
         if (editingPage == MainScreen.Instance.activePage && gui.BuildContextMenuButton(LSs.PageSettingsScreenshot)) {
@@ -237,38 +224,7 @@ public class ProjectPageSettingsPanel : PseudoScreen {
     public static void LoadProjectPageFromClipboard() {
         ErrorCollector collector = new ErrorCollector();
         var project = Project.current;
-        ProjectPage? page = null;
-        try {
-            string text = SDL.SDL_GetClipboardText();
-            byte[] compressedBytes = Convert.FromBase64String(text.Trim());
-            using DeflateStream deflateStream = new DeflateStream(new MemoryStream(compressedBytes), CompressionMode.Decompress);
-            using MemoryStream ms = new MemoryStream();
-            deflateStream.CopyTo(ms);
-            byte[] bytes = ms.GetBuffer();
-            int index = 0;
-
-#pragma warning disable IDE0078 // Use pattern matching: False positive detection that changes code behavior
-            if (DataUtils.ReadLine(bytes, ref index) != "YAFC" || DataUtils.ReadLine(bytes, ref index) != "ProjectPage") {
-#pragma warning restore IDE0078
-                throw new InvalidDataException();
-            }
-
-            Version version = new Version(DataUtils.ReadLine(bytes, ref index) ?? "");
-            if (version > YafcLib.version) {
-                collector.Error(LSs.AlertImportPageNewerVersion.L(version), ErrorSeverity.Important);
-            }
-
-            _ = DataUtils.ReadLine(bytes, ref index); // reserved 1
-            if (DataUtils.ReadLine(bytes, ref index) != "") // reserved 2 but this time it is required to be empty
-{
-                throw new NotSupportedException(LSs.AlertImportPageIncompatibleVersion.L(version));
-            }
-
-            page = JsonUtils.LoadFromJson<ProjectPage>(new ReadOnlySpan<byte>(bytes, index, (int)ms.Length - index), project, collector);
-        }
-        catch (Exception ex) {
-            collector.Exception(ex, LSs.AlertImportPageInvalidString, ErrorSeverity.Critical);
-        }
+        ProjectPage? page = ShareString.Decode<ProjectPage>(SDL.SDL_GetClipboardText(), project, collector);
 
         if (page != null) {
             var existing = project.FindPage(page.guid);

@@ -72,10 +72,16 @@ public abstract class TextDataColumn<TData>(string header, float initialWidth, f
             }
 
             if (gui.BuildButton(menuRect, SchemeColor.None, SchemeColor.Grey)) {
+                MenuOpening();
                 gui.ShowDropDown(menuRect, BuildMenu, new Padding(1f));
             }
         }
     }
+
+    /// <summary>
+    /// Called once before the menu is opened, to prepare data that is too slow to get for every <see cref="BuildMenu"/> call.
+    /// </summary>
+    protected virtual void MenuOpening() { }
 
     public virtual void BuildMenu(ImGui gui) { }
 }

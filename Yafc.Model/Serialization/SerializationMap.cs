@@ -60,7 +60,7 @@ internal abstract class SerializationMap {
     // Deserialization is a synchronous, single-threaded operation, but the test suite runs multiple
     // collections in parallel. A process-global counter would let one thread's deserialization make
     // IsDeserializing observable on unrelated threads, so this is per-thread.
-    [ThreadStatic] protected static int deserializingCount;
+    [ThreadStatic] internal static int deserializingCount;
     public static bool IsDeserializing => deserializingCount > 0;
 
     public static SerializationMap GetSerializationMap(Type type) {
@@ -118,15 +118,8 @@ internal static class SerializationMap<T> where T : class {
 
         public override void SerializeToJson(object target, Utf8JsonWriter writer) => SerializationMap<T>.SerializeToJson((T)target, writer);
 
-        public override void PopulateFromJson(object target, ref Utf8JsonReader reader, DeserializationContext context) {
-            try {
-                deserializingCount++;
-                SerializationMap<T>.PopulateFromJson((T)target, ref reader, context);
-            }
-            finally {
-                deserializingCount--;
-            }
-        }
+        public override void PopulateFromJson(object target, ref Utf8JsonReader reader, DeserializationContext context)
+            => SerializationMap<T>.PopulateFromJson((T)target, ref reader, context);
     }
 
     private static bool GetInterfaceSerializer(Type iface, [MaybeNullWhen(false)] out Type serializerType, out Type? keyType, [MaybeNullWhen(false)] out Type elementType) {
@@ -420,26 +413,33 @@ internal static class SerializationMap<T> where T : class {
         int lastMatch = -1;
         _ = reader.Read();
 
-        while (reader.TokenType != JsonTokenType.EndObject) {
-            var property = FindProperty(ref reader, ref lastMatch);
+        try {
+            SerializationMap.deserializingCount++;
 
-            if (property == null || lastMatch < constructorProperties) {
-                if (property == null) {
-                    logger.Error("Json has extra property: " + reader.GetString());
+            while (reader.TokenType != JsonTokenType.EndObject) {
+                var property = FindProperty(ref reader, ref lastMatch);
+
+                if (property == null || lastMatch < constructorProperties) {
+                    if (property == null) {
+                        logger.Error("Json has extra property: " + reader.GetString());
+                    }
+
+                    reader.Skip();
                 }
-
-                reader.Skip();
-            }
-            else {
+                else {
+                    _ = reader.Read();
+                    try {
+                        property.DeserializeFromJson(obj, ref reader, allObjects);
+                    }
+                    catch (InvalidOperationException ex) {
+                        allObjects.Exception(ex, LSs.LoadErrorEncounteredUnexpectedValue, ErrorSeverity.MajorDataLoss);
+                    }
+                }
                 _ = reader.Read();
-                try {
-                    property.DeserializeFromJson(obj, ref reader, allObjects);
-                }
-                catch (InvalidOperationException ex) {
-                    allObjects.Exception(ex, LSs.LoadErrorEncounteredUnexpectedValue, ErrorSeverity.MajorDataLoss);
-                }
             }
-            _ = reader.Read();
+        }
+        finally {
+            SerializationMap.deserializingCount--;
         }
     }
 }

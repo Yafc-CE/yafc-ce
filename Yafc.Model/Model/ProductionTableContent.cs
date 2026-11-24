@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using Yafc.Core;
 using Yafc.I18n;
@@ -634,6 +635,28 @@ public sealed class RecipeRow : ModelObject<ProductionTable>, IGroupedElement<Pr
     protected internal override void ThisChanged(bool visualOnly) => owner.ThisChanged(visualOnly);
 
     public void SetOwner(ProductionTable parent) => owner = parent;
+
+    /// <summary>
+    /// Create a copy of this row, including its nested table, without the information about what the user already built: the row markers
+    /// (<see cref="tag"/>) and <see cref="builtBuildings"/>.
+    /// </summary>
+    /// <param name="collector">Receives all problems that occurred while copying the row.</param>
+    /// <returns>The copy, which has the same owner as this row but is not part of its recipes, or <see langword="null"/> if the row could not be copied.</returns>
+    public RecipeRow? CopyAsUnbuilt(ErrorCollector collector) {
+        using MemoryStream stream = JsonUtils.SaveToJson(this);
+        // Not JsonUtils.Copy, because that notifies the owner, and making a copy does not change the owner.
+        RecipeRow? copy = JsonUtils.LoadFromJson<RecipeRow>(new ReadOnlySpan<byte>(stream.GetBuffer(), 0, (int)stream.Length), owner, collector, false);
+
+        if (copy != null) {
+            foreach (RecipeRow row in copy.subgroup?.GetAllRecipes().Prepend(copy) ?? [copy]) {
+                // The copy is not visible to the user (yet), so these changes don't need an undo record.
+                row.tag = 0;
+                row.builtBuildings = null;
+            }
+        }
+
+        return copy;
+    }
 
     public void RemoveFixedModules() {
         if (modules == null) {
