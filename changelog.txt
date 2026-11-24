@@ -56,6 +56,7 @@ Date:
         - Ignore .vscode/launch.json, as launch configurations contain personal paths and settings.
         - Document the distinction between project settings and preferences.
         - Detect deserialization for every loaded object, so loading a recipe row on its own no longer changes its fixed building count.
+        - Look up the root table of nested production tables instead of storing it, so it cannot become outdated.
 ----------------------------------------------------------------------------------------------------------------------
 Version: 2.21.0
 Date: 25 October 2026

@@ -136,6 +136,25 @@ public class ProductionTableTests {
     }
 
     [Fact]
+    public void ContainsAnywhere_AfterMovingNestedTableToAnotherPage_SearchesNewPage() {
+        Project project = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Model.ProductionTableContentTests.lua");
+        ProductionTable source = (ProductionTable)new ProjectPage(project, typeof(ProductionTable)).content;
+        ProductionTable target = (ProductionTable)new ProjectPage(project, typeof(ProductionTable)).content;
+        RecipeRow header = new(source);
+        header.subgroup = new ProductionTable(header);
+        source.recipes.Add(header);
+        Recipe recipe = Database.recipes.all.Single(r => r.name == "recipe");
+        target.AddRecipe(recipe.With(Quality.Normal), DataUtils.DeterministicComparer);
+        Assert.False(header.subgroup.ContainsAnywhere(recipe));
+
+        source.RecordUndo().recipes.Remove(header);
+        header.SetOwner(target);
+        target.RecordUndo().recipes.Add(header);
+
+        Assert.True(header.subgroup.ContainsAnywhere(recipe));
+    }
+
+    [Fact]
     public void ProductionTableTest_CanSaveAndLoadWithRecipe() {
         Project project = LuaDependentTestHelper.GetProjectForLua("Yafc.Model.Tests.Model.ProductionTableContentTests.lua");
 
