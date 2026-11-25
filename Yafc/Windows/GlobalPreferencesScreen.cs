@@ -100,13 +100,10 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
             }
 
             gui.spacing = 1.5f;
-            using (gui.EnterRow()) {
-                if (gui.BuildButton(Icon.DarkMode)) {
-                    Preferences.Instance.darkMode = !Preferences.Instance.darkMode;
-                    RenderingUtils.SetColorScheme(Preferences.Instance.darkMode);
-                    Preferences.Instance.Save();
-                }
-                gui.BuildText(LSs.ToggleDarkMode, TextBlockDisplayStyle.WrappedText);
+            if (gui.BuildCheckBox(LSs.PrefsDarkMode, Preferences.Instance.darkMode, out bool newValue)) {
+                Preferences.Instance.darkMode = newValue;
+                Preferences.Instance.Save();
+                RenderingUtils.SetColorScheme(newValue);
             }
         }
     }
