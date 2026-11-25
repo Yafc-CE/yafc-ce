@@ -14,7 +14,7 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
         Create(LSs.GlobalPreferences, 50, parent);
         _ = InputSystem.Instance.SetDefaultKeyboardFocus(this);
     }
-    private bool IsValidFontFileExtension(string filepath) => filepath.ToLowerInvariant().EndsWith(".ttf") || filepath.ToLowerInvariant().EndsWith(".otf");
+    private bool IsValidFontFileExtension(string filepath) => filepath.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) || filepath.EndsWith(".otf", StringComparison.OrdinalIgnoreCase);
 
     private async void SelectFont() {
         // Use the YAFC/Data directory as the default folder because that is where YAFC has it's existing fonts as well as where it downloads additional ones.
