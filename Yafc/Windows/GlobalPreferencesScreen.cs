@@ -83,7 +83,7 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
                 bool forceSoftwareRenderer = Preferences.Instance.forceSoftwareRenderer;
                 // Treat this as "disabled" if opened from the Main Screen, as changing it would have no effect until a restart.
                 //  Additionally disabling it could make the Main Screen unusable / crash for some users.
-                if(gui.BuildCheckBox(LSs.WelcomeSoftwareRender, forceSoftwareRenderer, out forceSoftwareRenderer, SchemeColor.None, RectAllocator.LeftRow, null, isOpenedFromWelcomeScreen)) {
+                if (gui.BuildCheckBox(LSs.WelcomeSoftwareRender, forceSoftwareRenderer, out forceSoftwareRenderer, SchemeColor.None, RectAllocator.LeftRow, null, isOpenedFromWelcomeScreen)) {
                     Preferences.Instance.forceSoftwareRenderer = forceSoftwareRenderer;
                     Preferences.Instance.Save();
                 }
