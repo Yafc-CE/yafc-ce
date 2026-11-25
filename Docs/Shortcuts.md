@@ -12,6 +12,12 @@
 
 * **Ctrl+N** — Show NEIE (the Never Enough Items Explorer).
 
+## Production table shortcuts
+
+* **Ctrl+C** — Copy the recipe or nested table under the mouse.
+* **Ctrl+X** — Cut the recipe or nested table under the mouse.
+* **Ctrl+V** — Paste a recipe or nested table below the row under the mouse, or at the end of the page if the mouse is not over a row.
+
 ## Tabs shortcuts
 
 * **Ctrl+T** — New production sheet (new tab).

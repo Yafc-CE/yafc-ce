@@ -74,7 +74,15 @@ public abstract class ProjectPageView : Scrollable {
         gui.DrawPanel(viewport, bodyContent);
     }
 
-    public virtual bool ControlKey(SDL.SDL_Scancode code) => false;
+    /// <summary>
+    /// Gets whether the mouse is over this view, and not over something that is drawn on top of it, like a dropdown.
+    /// </summary>
+    public bool isMouseOver => InputSystem.Instance.HitTest() is IPanel panel && (panel == headerContent || panel == bodyContent);
+
+    /// <summary>
+    /// Handles a key that is pressed together with Ctrl, and without Shift or Alt.
+    /// </summary>
+    public virtual void ControlKey(SDL.SDL_Scancode code) { }
 
     public MemoryDrawingSurface GenerateFullPageScreenshot() {
         var headerSize = headerContent.contentSize;

@@ -76,6 +76,10 @@ public sealed class InputSystem {
 
     public bool control => (keyMod & SDL.SDL_Keymod.KMOD_CTRL) != 0;
     public bool shift => (keyMod & SDL.SDL_Keymod.KMOD_SHIFT) != 0;
+    /// <summary>
+    /// Gets whether the current <see cref="IKeyboardFocus.KeyDown"/> call is sent because the user is holding the key.
+    /// </summary>
+    public bool isKeyRepeat { get; private set; }
 
     private void SetKeyMod(SDL.SDL_Keymod mod) {
         bool changed = control != ((mod & SDL.SDL_Keymod.KMOD_CTRL) != 0) || shift != ((mod & SDL.SDL_Keymod.KMOD_SHIFT) != 0);
@@ -86,8 +90,9 @@ public sealed class InputSystem {
         }
     }
 
-    internal void KeyDown(SDL.SDL_Keysym key) {
+    internal void KeyDown(SDL.SDL_Keysym key, bool isRepeat) {
         SetKeyMod(key.mod);
+        isKeyRepeat = isRepeat;
 
         if (activeKeyboardFocus == null || !activeKeyboardFocus.KeyDown(key)) {
             _ = (defaultKeyboardFocus?.KeyDown(key));
