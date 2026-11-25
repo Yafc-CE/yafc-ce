@@ -31,7 +31,6 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
 
     private void ApplyFont(string? result) {
         Preferences.Instance.overrideFont = result;
-        languageScroll.RebuildContents();
         Preferences.Instance.Save();
     }
 
