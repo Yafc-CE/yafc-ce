@@ -107,28 +107,13 @@ internal static class Language {
         foreach (var (k, v) in list) {
             if (!Font.text.CanDraw(v.NativeName + v.CheckExtraCharacters) && !listFontSupported) {
                 bool result;
-                if (Font.text.CanDraw(v.NativeName)) {
-                    result = gui.BuildLink($"{v.NativeName} ({k})");
-                }
-                else {
-                    // Languages that are not supported by the current Font require a restart, 
-                    //  and can thereby only be selected from the WelcomeScreen, or when Global Preferences is opened from there.
-                    if (gui.window is WelcomeScreen) {
-                        result = gui.BuildLink($"{v.LatinName} ({k})");
-                    }
-                    else {
-                        TextBlockDisplayStyle style = TextBlockDisplayStyle.WrappedText with { Color = SchemeColor.GreyText };
-                        gui.BuildText($"{v.LatinName} ({k})", style);
-                        result = false;
-                    }
-                }
+                result = gui.BuildLink($"{v.NativeName} ({k})");
 
                 if (result) {
                     if (Font.FilesExist(v.BaseFontName) || Program.hasOverriddenFont) {
                         Preferences.Instance.language = k;
                         Preferences.Instance.Save();
                         gui.CloseDropdown();
-                        restartIfNecessary();
                     }
                     else {
                         gui.ShowDropDown(async gui => {
@@ -162,10 +147,8 @@ internal static class Language {
                                         entry.ExtractToFile($"Data/{v.BaseFontName}-Regular.ttf");
                                     }
                                 }
-                                // Save and restart
                                 Preferences.Instance.language = k;
                                 Preferences.Instance.Save();
-                                restartIfNecessary();
                             }
                         });
                     }
@@ -175,13 +158,6 @@ internal static class Language {
                 Preferences.Instance.language = k;
                 Preferences.Instance.Save();
                 _ = gui.CloseDropdown();
-            }
-        }
-
-        static void restartIfNecessary() {
-            if (!Program.hasOverriddenFont) {
-                Process.Start("dotnet", Assembly.GetEntryAssembly()!.Location);
-                Environment.Exit(0);
             }
         }
     }
