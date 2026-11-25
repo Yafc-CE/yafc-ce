@@ -30,7 +30,7 @@ public class Font(FontFile file, float size) {
     /// any characters do not have a glyph.
     /// </summary>
     public bool CanDraw(string value) {
-        nint handle = GetHandle(size);
+        nint handle = GetHandle(8); // Get a Handle for an arbitrarily sized font.
         foreach (char ch in value) {
             if (SDL_ttf.TTF_GlyphIsProvided(handle, ch) == 0) {
                 return false;
