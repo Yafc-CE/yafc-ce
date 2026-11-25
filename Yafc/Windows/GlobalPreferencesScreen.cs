@@ -8,7 +8,7 @@ namespace Yafc;
 
 public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
     internal readonly ScrollArea languageScroll = new ScrollArea(20f, Language.LanguageSelection, collapsible: true);
-    private bool isOpenedFromWelcomeScreen;
+    private readonly bool isOpenedFromWelcomeScreen;
 
     internal GlobalPreferencesScreen(Window parent, bool isOpenedFromWelcomeScreen) : base(ImGuiUtils.DefaultScreenPadding) {
         this.isOpenedFromWelcomeScreen = isOpenedFromWelcomeScreen;
