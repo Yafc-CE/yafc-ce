@@ -260,6 +260,9 @@ public static class ImGuiUtils {
 
     public static bool BuildCheckBox(this ImGui gui, string text, bool value, out bool newValue, SchemeColor color = SchemeColor.None,
         RectAllocator allocator = RectAllocator.LeftRow, string? tooltip = null, bool enabled = true) {
+        if (color == SchemeColor.None) {
+            color = enabled ? SchemeColor.None : SchemeColor.Grey;
+        }
 
         using (gui.EnterRow(allocator: allocator)) {
             gui.BuildIcon(value ? Icon.CheckBoxCheck : Icon.CheckBoxEmpty, 1.5f, color);
