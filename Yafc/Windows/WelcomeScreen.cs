@@ -204,7 +204,7 @@ public class WelcomeScreen : WindowUtility, IProgress<(string, string)>, IKeyboa
                 //TODO: Fix tooltip, Icon, 
                 if (gui.BuildButton(Icon.Settings).WithTooltip(gui, LSs.WelcomeGlobalPreferencesTooltip)) {
                     if (ChildWindow is not GlobalPreferencesScreen) {
-                        _ = new GlobalPreferencesScreen(this);
+                        _ = new GlobalPreferencesScreen(this, true);
                     }
                     else {
                         ChildWindow.Focus();

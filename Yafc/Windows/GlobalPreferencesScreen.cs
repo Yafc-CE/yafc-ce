@@ -7,8 +7,10 @@ namespace Yafc;
 
 public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
     internal readonly ScrollArea languageScroll = new ScrollArea(20f, Language.LanguageSelection, collapsible: true);
+    private bool isOpenedFromWelcomeScreen;
 
-    internal GlobalPreferencesScreen(Window parent) : base(ImGuiUtils.DefaultScreenPadding) {
+    internal GlobalPreferencesScreen(Window parent, bool isOpenedFromWelcomeScreen) : base(ImGuiUtils.DefaultScreenPadding) {
+        this.isOpenedFromWelcomeScreen = isOpenedFromWelcomeScreen;
         Create(LSs.GlobalPreferences, 50, parent);
         _ = InputSystem.Instance.SetDefaultKeyboardFocus(this);
     }
@@ -82,9 +84,10 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
                 bool forceSoftwareRenderer = Preferences.Instance.forceSoftwareRenderer;
                 // Treat this as "disabled" if opened from the Main Screen, as changing it would have no effect until a restart.
                 //  Additionally disabling it could make the Main Screen unusable / crash for some users.
-                _ = gui.BuildCheckBox(LSs.WelcomeSoftwareRender, forceSoftwareRenderer, out forceSoftwareRenderer, (parent is MainScreen) ? SchemeColor.Grey : SchemeColor.None, RectAllocator.LeftRow, null, (parent is not MainScreen));
-                Preferences.Instance.forceSoftwareRenderer = forceSoftwareRenderer;
-                Preferences.Instance.Save();
+                if(gui.BuildCheckBox(LSs.WelcomeSoftwareRender, forceSoftwareRenderer, out forceSoftwareRenderer, isOpenedFromWelcomeScreen ? SchemeColor.None : SchemeColor.Grey, RectAllocator.LeftRow, null, isOpenedFromWelcomeScreen)) {
+                    Preferences.Instance.forceSoftwareRenderer = forceSoftwareRenderer;
+                    Preferences.Instance.Save();
+                }
             }
 
             if (gui.BuildCheckBox(LSs.PrefsAutosave, Preferences.Instance.autosaveEnabled, out bool autosaveEnabled)) {

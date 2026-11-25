@@ -403,7 +403,7 @@ public partial class MainScreen : WindowMain, IKeyboardFocus, IProgress<(string,
 
         if (gui.BuildContextMenuButton(LSs.GlobalPreferences) && gui.CloseDropdown()) {
             if (ChildWindow is not GlobalPreferencesScreen) {
-                _ = new GlobalPreferencesScreen(this);
+                _ = new GlobalPreferencesScreen(this, false);
             }
             else {
                 ChildWindow.Focus();

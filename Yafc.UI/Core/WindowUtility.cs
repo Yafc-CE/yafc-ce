@@ -8,7 +8,7 @@ namespace Yafc.UI;
 // Utility window is not hardware-accelerated and auto-size (and not resizable)
 public abstract class WindowUtility(Padding padding) : Window(padding) {
     private int windowWidth, windowHeight;
-    protected Window? parent;
+    private Window? parent;
 
     protected void Create(string? title, float width, Window? parent) {
         if (visible) {
