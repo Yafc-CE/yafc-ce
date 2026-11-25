@@ -45,7 +45,6 @@ public class GlobalPreferencesScreen : WindowUtility, IKeyboardFocus {
         else {
             using (gui.EnterRow()) {
                 gui.BuildText(LSs.WelcomeLanguageHeader);
-                //gui.allocator = RectAllocator.RightRow;
                 string lang = Preferences.Instance.language;
                 if (Language.LanguageMapping.TryGetValue(Preferences.Instance.language, out LanguageInfo? mapped)) {
                     lang = mapped.NativeName;
